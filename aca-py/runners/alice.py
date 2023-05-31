@@ -64,7 +64,7 @@ class AliceAgent(AriesAgent):
 # TODO: go back to reading from terminal
 async def input_invitation(agent_container):
     agent_container.agent._connection_ready = asyncio.Future()
-    details = '{"@type": "https://didcomm.org/out-of-band/1.1/invitation", "@id": "29ff5d65-9ed5-437d-80fd-d169aaf0b075", "services": [{"id": "#inline", "type": "did-communication", "recipientKeys": ["did:key:z6MkkLRLwcfUz8ieBSynTmCTpTaPMqeGRMuhtStWo1HiGh7y"], "serviceEndpoint": "http://192.168.1.105:8020"}], "handshake_protocols": ["https://didcomm.org/didexchange/1.0"], "label": "faber.agent"}'
+    details = '{"@type": "https://didcomm.org/out-of-band/1.1/invitation", "@id": "90f40ce8-1a20-4c3b-a768-c22eb8aeb82d", "handshake_protocols": ["https://didcomm.org/didexchange/1.0"], "services": [{"id": "#inline", "type": "did-communication", "recipientKeys": ["did:key:z6Mkqm22cgjk76uwYi9Z9zQWy4Up1URqdi8huTLtG5pYGjjK"], "serviceEndpoint": "http://192.168.1.105:8020"}], "label": "faber.agent"}'
     if details:
         b64_invite = None
         try:

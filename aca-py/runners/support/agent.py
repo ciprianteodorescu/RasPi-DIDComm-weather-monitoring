@@ -23,6 +23,8 @@ from aiohttp import (
 
 from .utils import flatten, log_json, log_msg, log_timer, output_reader
 
+PROJECT_NAME = "RasPi-DIDComm-weather-monitoring"
+
 LOGGER = logging.getLogger(__name__)
 
 event_stream_handler = logging.StreamHandler()
@@ -42,7 +44,22 @@ WEBHOOK_TARGET = os.getenv("WEBHOOK_TARGET")
 
 AGENT_ENDPOINT = None
 if os.popen("uname").read().strip() == "Darwin":
-    AGENT_ENDPOINT = os.popen("ifconfig -l | xargs -n1 ipconfig getifaddr").read().strip()
+    # determine if we need to go back to find the script
+    wd = os.popen("pwd").read().strip().split("/")
+    proj_i = 0
+    for i in range(len(wd)):
+        if wd[i] == PROJECT_NAME:
+            proj_i = i
+            break
+    back = len(wd) - proj_i - 1
+
+    # run the script
+    if back == 0:
+        AGENT_ENDPOINT = os.popen("chmod +x ./macOS_get_ip.sh && ./macOS_get_ip.sh").read().strip()
+    else:
+        command = "chmod +x " + (back * "../") + "macOS_get_ip.sh && " + (back * "../") + "macOS_get_ip.sh"
+        AGENT_ENDPOINT = os.popen(command).read().strip()
+
 elif os.popen("uname").read().strip() == "Linux":
     AGENT_ENDPOINT = os.popen("ip route get 8.8.8.8 | grep -oP 'src \\K[^ ]+'").read().strip()
 

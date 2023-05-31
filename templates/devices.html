@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+
+<p>You have {{ devices | length }} device{% if devices | length == 0 or devices | length > 1 %}s{% endif %} connected{% if devices | length == 0 %}.{% else %}:{% endif %}
+</p>
+{% for device in devices %}
+<p>{{ device }}</p>
+{% endfor %}
+
+<p>aro</p>
+<p>{{ invitation }}</p>
+
+{% endblock %}

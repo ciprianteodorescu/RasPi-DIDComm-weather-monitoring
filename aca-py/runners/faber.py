@@ -7,27 +7,25 @@ import time
 import datetime
 
 from aiohttp import ClientError
-from qrcode import QRCode
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from agent_container import (  # noqa:E402
+from runners.agent_container import (  # noqa:E402
     arg_parser,
     create_agent_with_args,
     AriesAgent,
 )
-from support.agent import (  # noqa:E402
+from runners.support.agent import (  # noqa:E402
     CRED_FORMAT_INDY,
     CRED_FORMAT_JSON_LD,
     SIG_TYPE_BLS,
 )
-from support.utils import (  # noqa:E402
+from runners.support.utils import (  # noqa:E402
     log_msg,
     log_status,
     prompt,
     prompt_loop,
 )
-
 
 CRED_PREVIEW_TYPE = "https://didcomm.org/issue-credential/2.0/credential-preview"
 SELF_ATTESTED = os.getenv("SELF_ATTESTED")
@@ -39,14 +37,14 @@ LOGGER = logging.getLogger(__name__)
 
 class FaberAgent(AriesAgent):
     def __init__(
-        self,
-        ident: str,
-        http_port: int,
-        admin_port: int,
-        no_auto: bool = False,
-        endorser_role: str = None,
-        revocation: bool = False,
-        **kwargs,
+            self,
+            ident: str,
+            http_port: int,
+            admin_port: int,
+            no_auto: bool = False,
+            endorser_role: str = None,
+            revocation: bool = False,
+            **kwargs,
     ):
         super().__init__(
             ident,
@@ -78,34 +76,7 @@ class FaberAgent(AriesAgent):
         d = datetime.date.today()
         birth_date = datetime.date(d.year - age, d.month, d.day)
         birth_date_format = "%Y%m%d"
-        if aip == 10:
-            # define attributes to send for credential
-            self.cred_attrs[cred_def_id] = {
-                "name": "Alice Smith",
-                "date": "2018-05-28",
-                "degree": "Maths",
-                "birthdate_dateint": birth_date.strftime(birth_date_format),
-                "timestamp": str(int(time.time())),
-            }
-
-            cred_preview = {
-                "@type": CRED_PREVIEW_TYPE,
-                "attributes": [
-                    {"name": n, "value": v}
-                    for (n, v) in self.cred_attrs[cred_def_id].items()
-                ],
-            }
-            offer_request = {
-                "connection_id": self.connection_id,
-                "cred_def_id": cred_def_id,
-                "comment": f"Offer on cred def id {cred_def_id}",
-                "auto_remove": False,
-                "credential_preview": cred_preview,
-                "trace": exchange_tracing,
-            }
-            return offer_request
-
-        elif aip == 20:
+        if aip == 20:
             if cred_type == CRED_FORMAT_INDY:
                 self.cred_attrs[cred_def_id] = {
                     "name": "Alice Smith",
@@ -172,7 +143,7 @@ class FaberAgent(AriesAgent):
             raise Exception(f"Error invalid AIP level: {self.aip}")
 
     def generate_proof_request_web_request(
-        self, aip, cred_type, revocation, exchange_tracing, connectionless=False
+            self, aip, cred_type, revocation, exchange_tracing, connectionless=False
     ):
         age = 18
         d = datetime.date.today()
@@ -406,8 +377,8 @@ async def main(args):
                 rev_reg_id = (await prompt("Enter revocation registry ID: ")).strip()
                 cred_rev_id = (await prompt("Enter credential revocation ID: ")).strip()
                 publish = (
-                    await prompt("Publish now? [Y/N]: ", default="N")
-                ).strip() in "yY"
+                              await prompt("Publish now? [Y/N]: ", default="N")
+                          ).strip() in "yY"
                 try:
                     await faber_agent.agent.admin_POST(
                         "/revocation/revoke",
@@ -454,7 +425,7 @@ async def main(args):
         os._exit(1)
 
 
-if __name__ == "__main__":
+def runFaberAgentSeparately():
     parser = arg_parser(ident="faber", port=8020)
     args = parser.parse_args()
 
@@ -490,3 +461,63 @@ if __name__ == "__main__":
         asyncio.get_event_loop().run_until_complete(main(args))
     except KeyboardInterrupt:
         os._exit(1)
+
+
+async def runFaberAgentForWebApp():
+    parser = arg_parser(ident="faber", port=8020)
+    args = parser.parse_args()
+    faber_agent = await create_agent_with_args(args, ident="faber")
+
+    try:
+        log_status(
+            "#1 Provision an agent and wallet, get back configuration details"
+            + (
+                f" (Wallet type: {faber_agent.wallet_type})"
+                if faber_agent.wallet_type
+                else ""
+            )
+        )
+        agent = FaberAgent(
+            "faber.agent",
+            faber_agent.start_port,
+            faber_agent.start_port + 1,
+            genesis_data=faber_agent.genesis_txns,
+            no_auto=faber_agent.no_auto,
+            tails_server_base_url=faber_agent.tails_server_base_url,
+            revocation=faber_agent.revocation,
+            timing=faber_agent.show_timing,
+            mediation=faber_agent.mediation,
+            wallet_type=faber_agent.wallet_type,
+            seed=faber_agent.seed,
+            aip=faber_agent.aip,
+            endorser_role=faber_agent.endorser_role,
+        )
+
+        faber_schema_name = "degree schema"
+        faber_schema_attrs = [
+            "name",
+            "date",
+            "degree",
+            "birthdate_dateint",
+            "timestamp",
+        ]
+        if faber_agent.cred_type == CRED_FORMAT_INDY:
+            faber_agent.public_did = True
+            await faber_agent.initialize(
+                the_agent=agent,
+                schema_name=faber_schema_name,
+                schema_attrs=faber_schema_attrs,
+                create_endorser_agent=(faber_agent.endorser_role == "author")
+                if faber_agent.endorser_role
+                else False,
+            )
+        else:
+            raise Exception("Invalid credential type:" + faber_agent.cred_type)
+
+        print("initialized faber agent")
+        return faber_agent
+    except:
+        terminated = await faber_agent.terminate()
+
+if __name__ == "__main__":
+    runFaberAgentSeparately()

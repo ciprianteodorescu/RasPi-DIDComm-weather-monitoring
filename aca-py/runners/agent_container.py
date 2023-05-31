@@ -14,7 +14,7 @@ from aiohttp import ClientError
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from support.agent import (  # noqa:E402
+from runners.support.agent import (  # noqa:E402
     DemoAgent,
     default_genesis_txns,
     start_mediator_agent,
@@ -26,7 +26,7 @@ from support.agent import (  # noqa:E402
     DID_METHOD_KEY,
     KEY_TYPE_BLS,
 )
-from support.utils import (  # noqa:E402
+from runners.support.utils import (  # noqa:E402
     check_requires,
     log_json,
     log_msg,
@@ -475,6 +475,7 @@ class AriesAgent(DemoAgent):
             self.log("Problem report message:", message.get("error_msg"))
 
     async def handle_basicmessages(self, message):
+        print(message)
         self.log("Received message:", message["content"])
 
     async def handle_endorse_transaction(self, message):
