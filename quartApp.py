@@ -20,7 +20,7 @@ locale.setlocale(locale.LC_TIME, "ro_RO")
 app = Quart(__name__)
 
 USER = "Ciprian"
-DEVICES = ["a", "b"]
+devices = []
 agent = None
 
 loop = asyncio.new_event_loop()
@@ -37,14 +37,23 @@ async def home():
 
 @app.route("/devices")
 async def devices():
-    global agent, latestInvitation
+    global agent, latestInvitation, devices
 
-    await background_process_test()
+    try:
+        devices = [i.get("their_label", None) for i in runInCoroutine(agent.admin_GET(f"/connections"))["results"] if i.get("their_label", None) is not None]
+    except:
+        devices = []
+        print("failed retrieving connections")
+
+    try:
+        latestInvitation = json.dumps(runInCoroutine(generateInvitation())["invitation"])
+    except:
+        latestInvitation = "agent not initialized yet"
 
     if agent is not None:
-        return await render_template('devices.html', user=USER, devices=DEVICES, date=getCurrentDate(),
+        return await render_template('devices.html', user=USER, devices=devices, date=getCurrentDate(),
                                      invitation=latestInvitation)
-    return await render_template('devices.html', user=USER, devices=DEVICES, date=getCurrentDate())
+    return await render_template('devices.html', user=USER, devices=devices, date=getCurrentDate())
 
 
 @app.route("/login")
@@ -52,18 +61,23 @@ async def login():
     return await render_template('login.html', date=getCurrentDate())
 
 
-async def background_process_test():
-    global agent, loop, latestInvitation
-    latestInvitation = "updating..."
-    if agent is not None:
-        latestInvitation = json.dumps(loop.run_until_complete(generateInvitation())["invitation"])
-        print(latestInvitation)
-    return latestInvitation
+def runInCoroutine(task):
+    global agent, loop
+
+    return loop.run_until_complete(task)
 
 
 async def generateInvitation():
     global agent
-    return await agent.generate_invitation(display_qr=False, reuse_connections=agent.reuse_connections, wait=False)
+    return runInCoroutine(agent.generate_invitation(display_qr=False, reuse_connections=agent.reuse_connections, wait=False))
+
+
+@app.route("/conn")
+async def connections():
+    try:
+        return runInCoroutine(agent.admin_GET(f"/connections"))
+    except:
+        return "{}"
 
 
 def getCurrentDate():
