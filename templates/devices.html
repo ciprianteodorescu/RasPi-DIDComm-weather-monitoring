@@ -4,13 +4,40 @@
 
 {% block content %}
 
-<p>You have {{ devices | length }} device{% if devices | length == 0 or devices | length > 1 %}s{% endif %} connected{% if devices | length == 0 %}.{% else %}:{% endif %}
-</p>
-{% for device in devices %}
-<p>{{ device }}</p>
-{% endfor %}
+    <p>You have {{ labels | length }} device{% if labels | length == 0 or labels | length > 1 %}s{% endif %} connected{% if labels | length == 0 %}.{% else %}:{% endif %}
+    </p>
+    {% if labels | length > 0 %}
+        {% for i in range(labels | length) %}
+            <p onclick="pySend('{{ connectionIds[i] }}')">{{ labels[i] }}</p>
+        {% endfor %}
+    {% endif %}
 
+    <p>{{ invitation }}</p>
 
-<p>{{ invitation }}</p>
+{% endblock %}
 
+{% block script %}
+    <script>
+    function sendMessageToConnection(conn_id) {
+        fetch("http://0.0.0.0:8021/connections/" + conn_id + "/send-message", {
+            method: "POST",
+            body: JSON.stringify({
+                content: "ARO"
+            })
+        });
+    }
+
+    function pySend(connId) {
+        fetch("send-message", {
+            method: "POST",
+            body: JSON.stringify({
+                connection_id: connId
+            })
+        })
+    }
+
+    function showAlert(conn_id) {
+        alert(conn_id)
+    }
+    </script>
 {% endblock %}

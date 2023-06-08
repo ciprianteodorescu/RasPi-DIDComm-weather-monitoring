@@ -1,4 +1,4 @@
-from quart import Quart, render_template
+from quart import Quart, render_template, request
 import datetime as dt
 import locale
 import asyncio
@@ -15,13 +15,20 @@ import nest_asyncio
 nest_asyncio.apply()
 
 DATE_FORMAT = '%b %Y'
-locale.setlocale(locale.LC_TIME, "ro_RO")
+try:
+    locale.setlocale(locale.LC_TIME, "ro_RO")
+except:
+    None
 
 app = Quart(__name__)
 
+HOST = '0.0.0.0'
+PORT = 5040
+
 USER = "Ciprian"
-devices = []
-agent = None
+labels = []
+connectionIds = []
+agent: faber.FaberAgent = None
 
 loop = asyncio.new_event_loop()
 asyncio.set_event_loop(loop)
@@ -32,17 +39,20 @@ latestInvitation = ""
 @app.route("/")
 @app.route("/home")
 async def home():
-    return await render_template('home.html', user=USER, devices=DEVICES, date=getCurrentDate())
+    return await render_template('home.html', user=USER, labels=labels, date=getCurrentDate())
 
 
 @app.route("/devices")
 async def devices():
-    global agent, latestInvitation, devices
+    global agent, latestInvitation, labels, connectionIds
 
     try:
-        devices = [i.get("their_label", None) for i in runInCoroutine(agent.admin_GET(f"/connections"))["results"] if i.get("their_label", None) is not None]
+        conns = runInCoroutine(agent.admin_GET(f"/connections"))["results"]
+        labels = [i.get("their_label", None) for i in conns if i.get("their_label", None) is not None]
+        connectionIds = [i.get("connection_id", None) for i in conns if i.get("connection_id", None) is not None]
     except:
-        devices = []
+        labels = []
+        connectionIds = []
         print("failed retrieving connections")
 
     try:
@@ -51,9 +61,10 @@ async def devices():
         latestInvitation = "agent not initialized yet"
 
     if agent is not None:
-        return await render_template('devices.html', user=USER, devices=devices, date=getCurrentDate(),
-                                     invitation=latestInvitation)
-    return await render_template('devices.html', user=USER, devices=devices, date=getCurrentDate())
+        return await render_template('devices.html', user=USER, labels=labels, connectionIds=connectionIds,
+                                     date=getCurrentDate(), invitation=latestInvitation)
+    return await render_template('devices.html', user=USER, labels=labels, connectionIds=connectionIds,
+                                 date=getCurrentDate())
 
 
 @app.route("/login")
@@ -72,12 +83,26 @@ async def generateInvitation():
     return runInCoroutine(agent.generate_invitation(display_qr=False, reuse_connections=agent.reuse_connections, wait=False))
 
 
+@app.route("/send-message", methods=['POST'])
+async def sendMessageToDevice():
+    global agent
+    args = await request.get_data()
+    connectionId = json.loads(args.decode("utf-8"))["connection_id"]
+
+    return runInCoroutine(
+        agent.agent.admin_POST(
+            f"/connections/{connectionId}/send-message",
+            {"content": args},
+        )
+    )
+
+
 @app.route("/conn")
 async def connections():
     try:
         return runInCoroutine(agent.admin_GET(f"/connections"))
     except:
-        return "{}"
+        return {}
 
 
 def getCurrentDate():
@@ -85,7 +110,7 @@ def getCurrentDate():
 
 
 def startWebApp():
-    app.run(debug=True, host='0.0.0.0', port=5040)
+    app.run(debug=True, host=HOST, port=PORT)
 
 
 def startAgent():

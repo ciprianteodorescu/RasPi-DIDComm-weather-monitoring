@@ -476,6 +476,10 @@ class AriesAgent(DemoAgent):
 
     async def handle_basicmessages(self, message):
         print(message)
+
+        if "received your message" not in message["content"] and "role" not in message.keys():
+            await self.admin_POST(f"/connections/{message['connection_id']}/store-message", data=message)
+
         self.log("Received message:", message["content"])
 
     async def handle_endorse_transaction(self, message):
