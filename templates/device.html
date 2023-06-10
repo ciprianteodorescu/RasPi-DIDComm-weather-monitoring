@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+
+{% block title %}Device{% endblock %}
+
+{% block content %}
+    <p>{{ connection }}</p>
+    <br>
+
+    <div>
+        <canvas id="myChart"></canvas>
+    </div>
+
+    <br>
+    {% for message in messages %}
+        <p>{{ message }}</p>
+    {% endfor %}
+    <br>
+    <br>
+    <p>{{ messages }}</p>
+{% endblock %}
+
+{% block script %}
+<script>
+    const ctx = document.getElementById('myChart');
+    const values = {{ messages }}
+    const timestamps = {{ timestamps | safe }}
+
+    new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: timestamps,
+      datasets: [{
+        label: '# of Votes',
+        data: {{ messages }},
+        borderWidth: 1
+      }]
+    },
+    options: {
+      scales: {
+        y: {
+          beginAtZero: true
+        }
+      }
+    }
+  });
+</script>
+{% endblock %}
