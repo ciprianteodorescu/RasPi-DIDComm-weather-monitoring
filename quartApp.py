@@ -66,11 +66,33 @@ async def devices():
 @app.route("/devices/<connection_id>")
 async def device(connection_id):
     connection = await get_connection(connection_id)
+    location = await get_connection_location(connection_id)
     messages = sorted((await get_messages(connection_id)), key=sort_messages_key)
     timestamps = [m["sent_time"] for m in messages]
-    messages = [int(m["content"]) for m in messages]
 
-    return await render_template("device.html", user=USER, connection=connection, messages=messages, timestamps=timestamps, date=get_current_date())
+    values = [m["content"] for m in messages]
+    temp_array = {}
+    humidity_array = {}
+    wind_array = {}
+    for i in range(len(values)):
+        # this try-except block is needed in case (some) messages are not json formatted
+        try:
+            json_values = json.loads(values[i])
+            temp = json_values["temp"] if "temp" in json_values.keys() else None
+            humidity = json_values["humidity"] if "humidity" in json_values.keys() else None
+            wind = json_values["wind"] if "wind" in json_values.keys() else None
+            if temp is not None:
+                temp_array[timestamps[i]] = temp
+            if humidity is not None:
+                humidity_array[timestamps[i]] = humidity
+            if wind is not None:
+                wind_array[timestamps[i]] = wind
+        except:
+            None
+
+    return await render_template("device.html", user=USER, connection=connection, temp_array=temp_array,
+                                 humidity_array=humidity_array, wind_array=wind_array, date=get_current_date(),
+                                 location=location if location != "{}" else "")
 
 
 @app.route("/login")
@@ -96,14 +118,18 @@ async def send_message_to_device():
     args = await request.get_data()
     json_args = json.loads(args.decode("utf-8"))
     connection_id = json_args["connection_id"]
-    t = json_args["t"]
-    h = json_args["h"]
-    w = json_args["w"]
+    content = {
+        "temp": json_args["temp"],
+        "humidity": json_args["humidity"],
+        "wind": json_args["wind"]
+    }
+
+    content = json.dumps(content)
 
     return run_in_coroutine(
         agent.agent.admin_POST(
             f"/connections/{connection_id}/send-message",
-            {"content": args.decode("utf-8")},
+            {"content": content},
         )
     )
 
@@ -128,6 +154,36 @@ async def get_connection(connection_id):
 async def get_messages(connection_id):
     try:
         return run_in_coroutine(agent.admin_GET(f"/connections/{connection_id}/basic-messages"))["results"]
+    except:
+        return {}
+
+
+@app.route("/set-connection-location/<connection_id>", methods=["POST"])
+async def set_connection_location(connection_id):
+    try:
+        args = await request.get_data()
+        json_args = json.loads(args.decode("utf-8"))
+        location = json_args["location"]
+
+        location_request = {"metadata": {"location": location}}
+        return run_in_coroutine(
+            agent.agent.admin_POST(
+                f"/connections/{connection_id}/metadata",
+                location_request,
+            )
+        )
+    except:
+        return {}
+
+
+@app.route("/get-connection-location/<connection_id>")
+async def get_connection_location(connection_id):
+    try:
+        return run_in_coroutine(
+            agent.agent.admin_GET(
+                f"/connections/{connection_id}/metadata",
+            )
+        )["results"]["location"]
     except:
         return {}
 

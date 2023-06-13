@@ -24,18 +24,6 @@
         });
     }
 
-    function pySend(connId) {
-        fetch("send-message", {
-            method: "POST",
-            body: JSON.stringify({
-                connection_id: connId,
-                t: 15,
-                h: 67,
-                w: 13
-            })
-        })
-    }
-
     function showAlert(conn_id) {
         alert(conn_id)
     }

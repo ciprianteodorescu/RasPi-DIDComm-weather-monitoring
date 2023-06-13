@@ -3,17 +3,28 @@
 {% block title %}Device{% endblock %}
 
 {% block content %}
-    <p>{{ connection }}</p>
-    <br>
+    <div class="location-container">
+        <label for="new_location">Location:</label>
+        <input type="text" id="new_location" name="new_location" value="{{ location }}"><br />
+        <button onclick="setLocation('{{ connection['connection_id'] }}', new_location)">Update location</button><br />
 
-    <div>
-        <canvas id="myChart"></canvas>
+        <br /><button onclick='pySend("{{ connection["connection_id"] }}")'>Send Msg</button><br />
     </div>
 
-    <br>
-    {% for message in messages %}
-        <p>{{ message }}</p>
-    {% endfor %}
+    <div class="charts-container">
+        <div class="chart">
+            <canvas id="tempChart" ></canvas>
+        </div>
+
+        <div class="chart">
+            <canvas id="humidityChart" ></canvas>
+        </div>
+
+        <div class="chart">
+            <canvas id="windChart" ></canvas>
+        </div>
+    </div>
+
     <br>
     <br>
     <p>{{ messages }}</p>
@@ -21,27 +32,132 @@
 
 {% block script %}
 <script>
-    const ctx = document.getElementById('myChart');
-    const values = {{ messages }}
-    const timestamps = {{ timestamps | safe }}
-
-    new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: timestamps,
-      datasets: [{
-        label: '# of Votes',
-        data: {{ messages }},
-        borderWidth: 1
-      }]
-    },
-    options: {
-      scales: {
-        y: {
-          beginAtZero: true
-        }
-      }
+    function setLocation(connId, new_location) {
+        const body = JSON.stringify({
+            location: new_location.value,
+        });
+        fetch("/set-connection-location/" + connId, {
+            method: "POST",
+            body: body
+        });
     }
-  });
+
+    function getRandomInt(max) {
+        return Math.floor(Math.random() * max)
+    }
+
+    function pySend(connId) {
+        const body = JSON.stringify({
+            connection_id: connId,
+            temp: getRandomInt(30),
+            humidity: getRandomInt(100),
+            wind: getRandomInt(50),
+        });
+        fetch("/send-message", {
+            method: "POST",
+            body: body
+        });
+    }
+
+    function timestampsToDates(timestamps) {
+        const today = new Date().toDateString();
+        for(let i = 0; i < timestamps.length; i++) {
+            const date = new Date(Date.parse(timestamps[i]));
+            stringDate = date.getHours() + ":" + date.getMinutes();
+            if(date.toDateString() !== today) {
+                stringDate = date.getDate() + "." + (date.getMonth() + 1) + "." + date.getFullYear() + " " + stringDate;
+            }
+            timestamps[i] = stringDate;
+        }
+    }
+
+    function getChartOptionsWithMeasurementUnit(label) {
+        return {
+            scales: {
+                y: {
+                    beginAtZero: false,
+                    ticks: {
+                        callback: function(value, index, ticks) {
+                            return value + label;
+                        },
+                    },
+                },
+            },
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: (item) => `${item.dataset.label}: ${item.formattedValue}${label}`,
+                    },
+                },
+            },
+        }
+    }
+
+    const tempChart = document.getElementById('tempChart');
+    const humidityChart = document.getElementById('humidityChart');
+    const windChart = document.getElementById('windChart');
+
+    const tempValues = Object.values({{ temp_array | safe }});
+    const tempTimestamps = Object.keys({{ temp_array | safe }});
+
+    const humidityValues = Object.values({{ humidity_array | safe }});
+    const humidityTimestamps = Object.keys({{ humidity_array | safe }});
+
+    const windValues = Object.values({{ wind_array | safe }});
+    const windTimestamps = Object.keys({{ wind_array | safe }});
+
+    timestampsToDates(tempTimestamps);
+    timestampsToDates(humidityTimestamps);
+    timestampsToDates(windTimestamps);
+
+    const tempData = {
+        labels: tempTimestamps,
+        datasets: [{
+            label: 'Temperature',
+            data: tempValues,
+            borderWidth: 1,
+            borderColor: 'red'
+        }]
+    };
+    const humidityData = {
+        labels: humidityTimestamps,
+        datasets: [{
+            label: 'Humidity',
+            data: humidityValues,
+            borderWidth: 1,
+            borderColor: 'red'
+        }]
+    };
+    const windData = {
+        labels: windTimestamps,
+        datasets: [{
+            label: 'Wind Speed',
+            data: windValues,
+            borderWidth: 1,
+            borderColor: 'red'
+        }]
+    };
+
+    const tempOptions = getChartOptionsWithMeasurementUnit('°C')
+    const humidityOptions = getChartOptionsWithMeasurementUnit('%')
+    const windOptions = getChartOptionsWithMeasurementUnit(' km/h')
+
+    new Chart(tempChart, {
+        type: 'line',
+        data: tempData,
+        options: tempOptions,
+    });
+    new Chart(humidityChart, {
+        type: 'line',
+        data: humidityData,
+        options: humidityOptions,
+    });
+    new Chart(windChart, {
+        type: 'line',
+        data: windData,
+        options: windOptions,
+    });
 </script>
 {% endblock %}
