@@ -1,4 +1,14 @@
-from quart import Quart, render_template, request
+from quart import Quart, render_template, request, redirect, url_for, flash
+from quart_auth import AuthManager, login_required, Unauthorized, AuthUser, current_user, login_user, logout_user
+
+import sqlalchemy as sa
+import sqlalchemy.orm
+from sqlalchemy.orm import Mapped, mapped_column
+from quart_sqlalchemy import SQLAlchemyConfig
+from quart_sqlalchemy.framework import QuartSQLAlchemy
+
+from werkzeug.security import generate_password_hash, check_password_hash
+import secrets
 import datetime as dt
 import locale
 import asyncio
@@ -19,9 +29,67 @@ DATE_FORMAT = '%b %Y'
 try:
     locale.setlocale(locale.LC_TIME, "ro_RO")
 except:
-    None
+    pass
 
 app = Quart(__name__)
+db = QuartSQLAlchemy(
+  config=SQLAlchemyConfig(
+      binds=dict(
+          default=dict(
+              engine=dict(
+                  url="sqlite:///db.sqlite",
+                  echo=True,
+                  connect_args=dict(check_same_thread=False),
+              ),
+              session=dict(
+                  expire_on_commit=False,
+              ),
+          )
+      )
+  ),
+  app=app,
+)
+auth_manager = AuthManager()
+
+
+class DatabaseUser(db.Model, AuthUser):
+    __tablename__ = "user"
+
+    id: Mapped[int] = mapped_column(sa.Identity(), primary_key=True, autoincrement=True)
+    username: Mapped[str] = mapped_column(sa.String(100), unique=True)
+    password: Mapped[str] = mapped_column(sa.String(100))
+
+
+class AuthenticationUser(AuthUser):
+    def __init__(self, auth_id):
+        super().__init__(auth_id)
+        # self._resolved = False
+        self.username = None
+
+    # async def _resolve(self):
+    #     if not self._resolved:
+    #         with db.bind.Session() as session:
+    #             user = session.query(DatabaseUser).filter_by(id=self.auth_id).first()
+    #         self._username = user.username
+    #         self._resolved = True
+    #
+    # @property
+    # async def username(self):
+    #     await self._resolve()
+    #     return self._username
+
+    async def load_user_data(self):
+        if await current_user.is_authenticated:
+            with db.bind.Session() as session:
+                user = session.query(DatabaseUser).filter_by(id=self.auth_id).first()
+            self.username = user.username
+
+
+auth_manager.user_class = AuthenticationUser
+
+
+db.create_all()
+
 
 IP_SCRIPT_DIR = "RasPi-DIDComm-weather-monitoring"
 
@@ -42,10 +110,11 @@ latest_invitation = ""
 @app.route("/")
 @app.route("/home")
 async def home():
-    return await render_template('home.html', user=USER, labels=labels, date=get_current_date())
+    return await render_template('home.html', user=current_user.username if current_user is not None else None, labels=labels, date=get_current_date())
 
 
 @app.route("/devices")
+@login_required
 async def devices():
     global latest_invitation, labels, connection_ids
 
@@ -88,16 +157,80 @@ async def device(connection_id):
             if wind is not None:
                 wind_array[timestamps[i]] = wind
         except:
-            None
+            pass
 
     return await render_template("device.html", user=USER, connection=connection, temp_array=temp_array,
                                  humidity_array=humidity_array, wind_array=wind_array, date=get_current_date(),
                                  location=location if location != "{}" else "")
 
 
+@app.route("/signup")
+async def signup():
+    return await render_template('signup.html', date=get_current_date())
+
+
+@app.route("/signup", methods=["POST"])
+async def post_signup():
+    form = await request.form
+    username, password = form["username"], form["password"]
+
+    with db.bind.Session() as session:
+        user = session.query(DatabaseUser).filter_by(username=username).first()
+    if user:
+        await flash("Username already exists!")
+        return redirect(url_for("signup"))
+
+    new_user = DatabaseUser(username=username, password=generate_password_hash(password, method='sha256'))
+    with db.bind.Session() as session:
+        with session.begin():
+            session.add(new_user)
+            session.flush()
+            session.refresh(new_user)
+        # users = session.scalars(sa.select(User)).all()
+    return redirect(url_for("login"))
+
+
 @app.route("/login")
 async def login():
-    return await render_template('login.html', date=get_current_date())
+    login_first = request.args.get("login_first", False)
+    return await render_template('login.html', date=get_current_date(), login_first=login_first)
+
+
+@app.route("/login", methods=["POST"])
+async def post_login():
+    form = await request.form
+    username, password = form["username"], form["password"]
+
+    with db.bind.Session() as session:
+        user = session.query(DatabaseUser).filter_by(username=username).first()
+        print(user)
+
+    if user is None:
+        await flash(f"No user found with username {username}!")
+    elif check_password_hash(user.password, password):
+        login_user(AuthUser(user.id))
+    else:
+        await flash("Incorrect password!")
+
+    return redirect(url_for("home"))
+
+
+@app.route("/logout")
+async def logout():
+    logout_user()
+
+    return redirect(url_for("home"))
+
+
+@app.before_request
+@app.before_websocket
+async def load_user():
+    await current_user.load_user_data()
+
+
+@app.errorhandler(Unauthorized)
+async def redirect_to_login(*_):
+    return redirect(url_for("login", login_first=True))
 
 
 def run_in_coroutine(task):
@@ -209,7 +342,18 @@ def sort_messages_key(message):
 
 
 def start_web_app():
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'
+
+    app.config["QUART_AUTH_COOKIE_SECURE"] = False
+    app.config["QUART_AUTH_COOKIE_NAME"] = "test_cookie"
+    app.secret_key = 'oijwWduvRXtvvX2WHMKETA'  # secrets.token_urlsafe(16)
+
+    auth_manager.init_app(app)
+
     app.run(debug=True, host=HOST, port=PORT)
+
+    # db.init_app(app)
+    # db.create_all()
 
 
 def start_agent():

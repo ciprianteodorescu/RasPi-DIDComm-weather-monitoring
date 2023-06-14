@@ -76,13 +76,45 @@ img {
     width: 45vw;
     height: 50vh;
     margin-bottom: 50px;
-    /*max-width: 50%;*/
-    /*flex-basis: 50%;*/
 }
 
 .location-container {
     margin-bottom: 15px;
 }
+
+.dropdown {
+  position: relative;
+  display: inline-block;
+  float: right;
+}
+
+.dropdown-button {
+  padding: 16px;
+}
+
+.dropdown-content {
+  display: none;
+  position: absolute;
+  right: 0;
+  margin-top: 12px;
+  background-color: #f1f1f1;
+  min-width: 100px;
+  box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+  z-index: 1;
+}
+
+.dropdown-content a {
+  color: black;
+  padding: 12px 16px;
+  text-decoration: none;
+  display: block;
+}
+
+.dropdown-content a:hover {background-color: #ddd;}
+
+.dropdown:hover .dropdown-content {display: block;}
+
+.dropdown:hover .dropdown-button {background-color: #ddd;}
 
 /*
 div.devices-dropdown {

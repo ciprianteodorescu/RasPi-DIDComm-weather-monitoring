@@ -5,7 +5,7 @@
 {% block content %}
     <div class="location-container">
         <label for="new_location">Location:</label>
-        <input type="text" id="new_location" name="new_location" value="{{ location }}"><br />
+        <input type="text" id="new_location" name="new_location" value="{{ location }}" placeholder="No location set"><br />
         <button onclick="setLocation('{{ connection['connection_id'] }}', new_location)">Update location</button><br />
 
         <br /><button onclick='pySend("{{ connection["connection_id"] }}")'>Send Msg</button><br />

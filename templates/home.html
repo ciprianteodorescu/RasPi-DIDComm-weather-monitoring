@@ -4,6 +4,10 @@
 
 {% block content %}
 
-<h4 style="margin-top: 0px;">Welcome, {{ user }}!</h4>
+{% if user %}
+    <h4 style="margin-top: 0px;">Welcome, {{ user }}!</h4>
+{% else %}
+    <h4 style="margin-top: 0px;">Log in or sign up!</h4>
+{% endif %}
 
 {% endblock %}

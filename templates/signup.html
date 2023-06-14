@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+
+{% block title %}Sign Up{% endblock %}
+
+{% block content %}
+    <div>
+        {% with flash_msgs = get_flashed_messages() %}
+            {% if flash_msgs %}
+                <p>{{ flash_msgs[0] }}</p>
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <div>
+        <form method="post" action="/signup">
+            <input type="text" name="username" placeholder="Username" autofocus="">
+            <input type="password" name="password" placeholder="Password">
+            <button type="submit">Sign Up</button>
+        </form>
+    </div>
+    <br />
+    <div>
+        <p>Already have an account? <a href="/login">Log In</a>!</p>
+    </div>
+{% endblock %}
+
+{% block script %}
+
+{% endblock %}
