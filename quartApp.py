@@ -10,17 +10,13 @@ from quart_sqlalchemy import SQLAlchemyConfig
 from quart_sqlalchemy.framework import QuartSQLAlchemy
 
 from werkzeug.security import generate_password_hash, check_password_hash
-import secrets
 import datetime as dt
 import locale
 import asyncio
 from threading import Thread
 import json
 
-import sys
-import os
-
-sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/aca-py")
+from utils import get_agent_endpoint
 from demo.runners import faber
 
 import nest_asyncio
@@ -78,8 +74,6 @@ class AuthenticationUser(AuthUser):
 auth_manager.user_class = AuthenticationUser
 
 db.create_all()
-
-IP_SCRIPT_DIR = "RasPi-DIDComm-weather-monitoring"
 
 HOST = '0.0.0.0'
 PORT = 5040
@@ -337,8 +331,11 @@ async def get_connection_user(connection_id):
 
 async def refresh_connections():
     global connection_ids, labels
+    labels = []
+    connection_ids = []
     try:
-        conns = run_in_coroutine(agent.admin_GET(f"/connections"))["results"]
+        # only fetch active connections
+        conns = run_in_coroutine(agent.admin_GET(f"/connections", params={'state': 'active'}))["results"]
         # filter by user
         for conn in conns:
             conn_user = await get_connection_user(conn.get("connection_id", ""))
@@ -346,8 +343,6 @@ async def refresh_connections():
                 labels = [i.get("their_label", None) for i in conns if i.get("their_label", None) is not None]
                 connection_ids = [i.get("connection_id", None) for i in conns if i.get("connection_id", None) is not None]
     except:
-        labels = []
-        connection_ids = []
         print("failed retrieving connections")
 
 
@@ -384,31 +379,6 @@ def start_web_app():
 def start_agent():
     global agent, loop
     agent = loop.run_until_complete(faber.runFaberAgentForWebApp(get_agent_endpoint()))
-
-
-def get_agent_endpoint():
-    agent_endpoint = ""
-    if os.popen("uname").read().strip() == "Darwin":
-        # determine if we need to go back to find the script
-        wd = os.popen("pwd").read().strip().split("/")
-        proj_i = 0
-        for i in range(len(wd)):
-            if wd[i] == IP_SCRIPT_DIR:
-                proj_i = i
-                break
-        back = len(wd) - proj_i - 1
-
-        # run the script
-        if back == 0:
-            agent_endpoint = os.popen("chmod +x ./macOS_get_ip.sh && ./macOS_get_ip.sh").read().strip()
-        else:
-            command = "chmod +x " + (back * "../") + "macOS_get_ip.sh && " + (back * "../") + "macOS_get_ip.sh"
-            agent_endpoint = os.popen(command).read().strip()
-
-    elif os.popen("uname").read().strip() == "Linux":
-        agent_endpoint = os.popen("ip route get 8.8.8.8 | grep -oP 'src \\K[^ ]+'").read().strip()
-
-    return agent_endpoint
 
 
 if __name__ == '__main__':
