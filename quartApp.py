@@ -1,3 +1,5 @@
+from typing import Any, List, Union
+
 from quart import Quart, render_template, request, redirect, url_for, flash
 from quart_auth import AuthManager, login_required, Unauthorized, AuthUser, current_user, login_user, logout_user
 
@@ -33,21 +35,21 @@ except:
 
 app = Quart(__name__)
 db = QuartSQLAlchemy(
-  config=SQLAlchemyConfig(
-      binds=dict(
-          default=dict(
-              engine=dict(
-                  url="sqlite:///db.sqlite",
-                  echo=True,
-                  connect_args=dict(check_same_thread=False),
-              ),
-              session=dict(
-                  expire_on_commit=False,
-              ),
-          )
-      )
-  ),
-  app=app,
+    config=SQLAlchemyConfig(
+        binds=dict(
+            default=dict(
+                engine=dict(
+                    url="sqlite:///db.sqlite",
+                    echo=True,
+                    connect_args=dict(check_same_thread=False),
+                ),
+                session=dict(
+                    expire_on_commit=False,
+                ),
+            )
+        )
+    ),
+    app=app,
 )
 auth_manager = AuthManager()
 
@@ -66,18 +68,6 @@ class AuthenticationUser(AuthUser):
         # self._resolved = False
         self.username = None
 
-    # async def _resolve(self):
-    #     if not self._resolved:
-    #         with db.bind.Session() as session:
-    #             user = session.query(DatabaseUser).filter_by(id=self.auth_id).first()
-    #         self._username = user.username
-    #         self._resolved = True
-    #
-    # @property
-    # async def username(self):
-    #     await self._resolve()
-    #     return self._username
-
     async def load_user_data(self):
         if await current_user.is_authenticated:
             with db.bind.Session() as session:
@@ -87,9 +77,7 @@ class AuthenticationUser(AuthUser):
 
 auth_manager.user_class = AuthenticationUser
 
-
 db.create_all()
-
 
 IP_SCRIPT_DIR = "RasPi-DIDComm-weather-monitoring"
 
@@ -110,15 +98,13 @@ latest_invitation = ""
 @app.route("/")
 @app.route("/home")
 async def home():
-    return await render_template('home.html', user=current_user.username if current_user is not None else None, labels=labels, date=get_current_date())
+    return await render_template_with_base_variables('home.html')
 
 
 @app.route("/devices")
 @login_required
 async def devices():
-    global latest_invitation, labels, connection_ids
-
-    refresh_connections()
+    global latest_invitation
 
     try:
         latest_invitation = json.dumps(run_in_coroutine(generate_invitation())["invitation"])
@@ -126,13 +112,11 @@ async def devices():
         latest_invitation = "agent not initialized yet"
 
     if agent is not None:
-        return await render_template('devices.html', user=USER, labels=labels, connectionIds=connection_ids,
-                                     date=get_current_date(), invitation=latest_invitation)
-    return await render_template('devices.html', user=USER, labels=labels, connectionIds=connection_ids,
-                                 date=get_current_date())
+        return await render_template_with_base_variables('devices.html', invitation=latest_invitation)
 
 
 @app.route("/devices/<connection_id>")
+@login_required
 async def device(connection_id):
     connection = await get_connection(connection_id)
     location = await get_connection_location(connection_id)
@@ -159,14 +143,14 @@ async def device(connection_id):
         except:
             pass
 
-    return await render_template("device.html", user=USER, connection=connection, temp_array=temp_array,
-                                 humidity_array=humidity_array, wind_array=wind_array, date=get_current_date(),
-                                 location=location if location != "{}" else "")
+    return await render_template_with_base_variables("device.html", connection=connection, temp_array=temp_array,
+                                                     humidity_array=humidity_array, wind_array=wind_array,
+                                                     location=location if location != "{}" else "")
 
 
 @app.route("/signup")
 async def signup():
-    return await render_template('signup.html', date=get_current_date())
+    return await render_template_with_base_variables('signup.html')
 
 
 @app.route("/signup", methods=["POST"])
@@ -193,7 +177,7 @@ async def post_signup():
 @app.route("/login")
 async def login():
     login_first = request.args.get("login_first", False)
-    return await render_template('login.html', date=get_current_date(), login_first=login_first)
+    return await render_template_with_base_variables('login.html', login_first=login_first)
 
 
 @app.route("/login", methods=["POST"])
@@ -321,12 +305,46 @@ async def get_connection_location(connection_id):
         return {}
 
 
-def refresh_connections():
+@app.route("/set-connection-user/<connection_id>", methods=["POST"])
+async def set_connection_user(connection_id):
+    try:
+        args = await request.get_data()
+        json_args = json.loads(args.decode("utf-8"))
+        user = json_args["user"]
+
+        user_request = {"metadata": {"user": user}}
+        return run_in_coroutine(
+            agent.agent.admin_POST(
+                f"/connections/{connection_id}/metadata",
+                user_request,
+            )
+        )
+    except:
+        return {}
+
+
+@app.route("/get-connection-user/<connection_id>")
+async def get_connection_user(connection_id):
+    try:
+        return run_in_coroutine(
+            agent.agent.admin_GET(
+                f"/connections/{connection_id}/metadata",
+            )
+        )["results"]["user"]
+    except:
+        return {}
+
+
+async def refresh_connections():
     global connection_ids, labels
     try:
         conns = run_in_coroutine(agent.admin_GET(f"/connections"))["results"]
-        labels = [i.get("their_label", None) for i in conns if i.get("their_label", None) is not None]
-        connection_ids = [i.get("connection_id", None) for i in conns if i.get("connection_id", None) is not None]
+        # filter by user
+        for conn in conns:
+            conn_user = await get_connection_user(conn.get("connection_id", ""))
+            if conn_user == current_user.username:
+                labels = [i.get("their_label", None) for i in conns if i.get("their_label", None) is not None]
+                connection_ids = [i.get("connection_id", None) for i in conns if i.get("connection_id", None) is not None]
     except:
         labels = []
         connection_ids = []
@@ -339,6 +357,13 @@ def get_current_date():
 
 def sort_messages_key(message):
     return message["sent_time"]
+
+
+async def render_template_with_base_variables(template: Union[str, List[str]], **context: Any) -> str:
+    await refresh_connections()
+
+    return await render_template(template, username=current_user.username, labels=labels,
+                                 connection_ids=connection_ids, date=get_current_date(), **context)
 
 
 def start_web_app():

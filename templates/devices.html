@@ -6,7 +6,7 @@
     <p>You have {{ labels | length }} device{% if labels | length == 0 or labels | length > 1 %}s{% endif %} connected{% if labels | length == 0 %}.{% else %}:{% endif %}</p>
     {% if labels | length > 0 %}
         {% for i in range(labels | length) %}
-            <a href="/devices/{{ connectionIds[i] }}">{{ labels[i] }}</a>
+            <a href="/devices/{{ connection_ids[i] }}">{{ labels[i] }}</a>
         {% endfor %}
     {% endif %}
 

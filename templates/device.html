@@ -8,6 +8,9 @@
         <input type="text" id="new_location" name="new_location" value="{{ location }}" placeholder="No location set"><br />
         <button onclick="setLocation('{{ connection['connection_id'] }}', new_location)">Update location</button><br />
 
+        <input type="text" id="new_user" name="new_user" value="{{ username }}" placeholder="No user set"><br />
+        <button onclick="setUser('{{ connection['connection_id'] }}', new_user)">Update user</button><br />
+
         <br /><button onclick='pySend("{{ connection["connection_id"] }}")'>Send Msg</button><br />
     </div>
 
@@ -37,6 +40,16 @@
             location: new_location.value,
         });
         fetch("/set-connection-location/" + connId, {
+            method: "POST",
+            body: body
+        });
+    }
+
+    function setUser(connId, new_user) {
+        const body = JSON.stringify({
+            user: new_user.value,
+        });
+        fetch("/set-connection-user/" + connId, {
             method: "POST",
             body: body
         });

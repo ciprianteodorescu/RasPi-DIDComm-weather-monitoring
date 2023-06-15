@@ -54,6 +54,7 @@ img {
 .top-bar-child {
     color: black;
     margin-right: 2rem;
+    padding: 16px;
 }
 
 .top-bar-home {
@@ -88,10 +89,6 @@ img {
   float: right;
 }
 
-.dropdown-button {
-  padding: 16px;
-}
-
 .dropdown-content {
   display: none;
   position: absolute;
@@ -115,29 +112,3 @@ img {
 .dropdown:hover .dropdown-content {display: block;}
 
 .dropdown:hover .dropdown-button {background-color: #ddd;}
-
-/*
-div.devices-dropdown {
-    display: inline-block;
-}
-
-.devices-content {
-  display: none;
-  position: absolute;
-  background-color: #f9f9f9;
-  min-width: 560px;
-  box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
-  z-index: 1;
-}
-
-.devices-content a {
-  color: black;
-  padding: 12px 16px;
-  text-decoration: none;
-  display: block;
-  text-align: left;
-}
-
-.devices-dropdown:hover .devices-content {
-  display: block;
-}*/
