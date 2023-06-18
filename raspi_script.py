@@ -103,7 +103,7 @@ def readDHT22():
 def sendMeasuredValues():
     content = {
         "TSL2561": readTSL2561(),
-        "HW-611": readDHT22(),
+        "HW-611": readHW611(),
         "DHT22": readDHT22(),
     }
     content = json.dumps(content)
