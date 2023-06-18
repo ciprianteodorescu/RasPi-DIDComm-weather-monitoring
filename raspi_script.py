@@ -92,8 +92,9 @@ def readDHT22():
             print(f"Temperature: {temperature}")
             print(f"Humidity: {humidity}")
             return {"temperature": temperature, "humidity": humidity}
-        except RuntimeError as e:
-            if e.args == "A full buffer was not returned. Try again.":
+        except (RuntimeError, OverflowError) as e:
+            if e.args == "A full buffer was not returned. Try again."\
+                    or e.args == "unsigned short is greater than maximum":
                 print("Waiting for sensor...")
                 sleep(1)
             else:
