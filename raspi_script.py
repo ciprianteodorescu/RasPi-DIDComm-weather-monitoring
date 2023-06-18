@@ -97,6 +97,9 @@ def readDHT22():
             else:
                 print("Could not read DHT22 data. Check wiring.")
                 return {}
+        except TypeError:
+            print("Could not read DHT22 data. Check wiring.")
+            return {}
         sleep(1)
 
 
@@ -107,16 +110,16 @@ def sendMeasuredValues():
         "DHT22": readDHT22(),
     }
     content = json.dumps(content)
-    # try:
-    run_in_coroutine(
-        loop,
-        agent.agent.admin_POST(
-            f"/connections/{agent.agent.connection_id}/send-message",
-            {"content": content},
+    try:
+        run_in_coroutine(
+            loop,
+            agent.agent.admin_POST(
+                f"/connections/{agent.agent.connection_id}/send-message",
+                {"content": content},
+            )
         )
-    )
-    # except:
-    #     print("Could not send measured values")
+    except:
+        print("Could not send measured values")
 
 
 def start_agent():
