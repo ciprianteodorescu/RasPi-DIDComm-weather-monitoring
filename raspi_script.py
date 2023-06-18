@@ -96,7 +96,7 @@ def sendMeasuredValues():
     run_in_coroutine(
         loop,
         agent.agent.admin_POST(
-            f"/connections/{raspberry_agent.agent.connection_id}/send-message",
+            f"/connections/{agent.agent.connection_id}/send-message",
             {"content": content},
         )
     )
