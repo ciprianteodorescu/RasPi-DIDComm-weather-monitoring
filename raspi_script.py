@@ -34,25 +34,25 @@ agent: raspberry_agent.RaspberryAgent = None
 def initSensors():
     global tsl2561, hw611, dht22
 
-    if tsl2561 is None:
-        try:
-            i2c = busio.I2C(board.SCL, board.SDA)
-            tsl2561 = TSL2561(i2c)
-        except:
-            print("TSL2561 sensor not found. Check wiring.")
+    # if tsl2561 is None:
+    try:
+        i2c = busio.I2C(board.SCL, board.SDA)
+        tsl2561 = TSL2561(i2c)
+    except:
+        print("TSL2561 sensor not found. Check wiring.")
 
-    if hw611 is None:
-        try:
-            bus = SMBus(1)
-            hw611 = BMP280(i2c_dev=bus)
-        except:
-            print("BMP280 sensor not found. Check wiring.")
+    # if hw611 is None:
+    try:
+        bus = SMBus(1)
+        hw611 = BMP280(i2c_dev=bus)
+    except:
+        print("BMP280 sensor not found. Check wiring.")
 
-    if dht22 is None:
-        try:
-            dht22 = DHT22(board.D4)
-        except:
-            print("DHT22 sensor not found. Check wiring.")
+    # if dht22 is None:
+    try:
+        dht22 = DHT22(board.D4)
+    except:
+        print("DHT22 sensor not found. Check wiring.")
 
 
 def readTSL2561():
@@ -131,7 +131,6 @@ if __name__ == "__main__":
     # TODO: check if postgres docker container is running, if not start it
     start_agent()
     while True:
-        if tsl2561 is None or hw611 is None or dht22 is None:
-            initSensors()
+        initSensors()
         sendMeasuredValues()
         sleep(1)
