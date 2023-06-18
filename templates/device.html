@@ -3,38 +3,81 @@
 {% block title %}Device{% endblock %}
 
 {% block content %}
-    <div class="location-container">
-        <label for="new_location">Location:</label>
-        <input type="text" id="new_location" name="new_location" value="{{ location }}" placeholder="No location set"><br />
-        <button onclick="setLocation('{{ connection['connection_id'] }}', new_location)">Update location</button><br />
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-4">
+                <div class="location-container">
+                    <div class="form-group">
+                        <label for="new_location">Location:</label>
+                        <input type="text" id="new_location" name="new_location" value="{{ location }}" class="form-control" placeholder="No location set">
+                    </div>
+                    <button onclick="setLocation('{{ connection['connection_id'] }}', new_location)" class="btn btn-primary">Update location</button>
+                </div>
+            </div>
+            <!--<div class="col-md-4">
+                <div class="location-container">
+                    <div class="form-group">
+                        <label for="new_user">User:</label>
+                        <input type="text" id="new_user" name="new_user" value="{{ username }}" class="form-control" placeholder="No user set">
+                    </div>
+                    <button onclick="setUser('{{ connection['connection_id'] }}', new_user)" class="btn btn-primary">Update user</button>
+                    <button onclick='pySend("{{ connection["connection_id"] }}")' class="btn btn-primary">Send Msg</button>
+                </div>
+            </div>-->
+            <div class="col-md-4">
+                <div class="select-sensors-container">
+                    <label>Select connected sensors:</label><br />
+                    <ul class="sensor-list">
+                        <li>
+                            <input type="checkbox" id="luminosity_sensor" name="luminosity_sensor">
+                            <label for="luminosity_sensor">TSL2561 Luminosity Sensor</label>
+                        </li>
+                        <li>
+                            <input type="checkbox" id="temperature_sensor" name="temperature_sensor">
+                            <label for="temperature_sensor">DHT22 Temperature, Humidity Sensor</label>
+                        </li>
+                        <li>
+                            <input type="checkbox" id="pressure_sensor" name="pressure_sensor">
+                            <label for="pressure_sensor">HW-61 Pressure, Temperature Sensor</label>
+                        </li>
+                    </ul>
+                    <button class="btn btn-primary" onclick='setConnectedSensors("{{ connection["connection_id"] }}")'>Submit</button>
+                </div>
+            </div>
+        </div>
 
-        <input type="text" id="new_user" name="new_user" value="{{ username }}" placeholder="No user set"><br />
-        <button onclick="setUser('{{ connection['connection_id'] }}', new_user)">Update user</button><br />
+        <div class="charts-container">
+            <div class="chart">
+                <canvas id="tempChart"></canvas>
+            </div>
 
-        <br /><button onclick='pySend("{{ connection["connection_id"] }}")'>Send Msg</button><br />
+            <div class="chart">
+                <canvas id="humidityChart"></canvas>
+            </div>
+
+            <div class="chart">
+                <canvas id="windChart"></canvas>
+            </div>
+        </div>
     </div>
-
-    <div class="charts-container">
-        <div class="chart">
-            <canvas id="tempChart" ></canvas>
-        </div>
-
-        <div class="chart">
-            <canvas id="humidityChart" ></canvas>
-        </div>
-
-        <div class="chart">
-            <canvas id="windChart" ></canvas>
-        </div>
-    </div>
-
-    <br>
-    <br>
-    <p>{{ messages }}</p>
 {% endblock %}
 
 {% block script %}
 <script>
+    function setConnectedSensors(connId) {
+        const luminosityCheckbox = document.querySelector("#luminosity_sensor");
+
+        const body = JSON.stringify({
+            sensor_types: {
+                luminosity_sensor: luminosityCheckbox.checked,
+            }
+        });
+        fetch("/set-sensor-types/" + connId, {
+            method: "POST",
+            body: body
+        });
+    }
+
     function setLocation(connId, new_location) {
         const body = JSON.stringify({
             location: new_location.value,

@@ -17,7 +17,7 @@ from threading import Thread
 import json
 
 from utils import get_agent_endpoint
-from demo.runners import faber
+from demo.runners import server_agent
 
 import nest_asyncio
 
@@ -81,7 +81,7 @@ PORT = 5040
 USER = "Ciprian"
 labels = []
 connection_ids = []
-agent: faber.FaberAgent = None
+agent: server_agent.ServerAgent = None
 
 loop = asyncio.new_event_loop()
 asyncio.set_event_loop(loop)
@@ -329,6 +329,53 @@ async def get_connection_user(connection_id):
         return {}
 
 
+@app.route("/set-sensor-types/<connection_id>", methods=["POST"])
+async def set_sensor_types(connection_id):
+    try:
+        args = await request.get_data()
+        json_args = json.loads(args.decode("utf-8"))
+
+        sensor_types_request = {"metadata": json_args}
+        return run_in_coroutine(
+            agent.agent.admin_POST(
+                f"/connections/{connection_id}/metadata",
+                sensor_types_request,
+            )
+        )
+    except:
+        return {}
+
+
+@app.route("/get-sensor-types/<connection_id>")
+async def get_sensor_types(connection_id):
+    try:
+        return run_in_coroutine(
+            agent.agent.admin_GET(
+                f"/connections/{connection_id}/metadata",
+            )
+        )["results"]["sensor_types"]
+    except:
+        return {}
+
+
+@app.route("/get-connection-from-did/<did>")
+async def get_connection_from_did(did):
+    try:
+        return run_in_coroutine(
+            agent.agent.admin_GET(
+                f"/connections", params={"their_did": did}
+            )
+        )["results"][0]
+    except:
+        return ""
+
+
+# @app.route("/get-last-values")
+# async def get_last_values():
+#     for conn_id in connection_ids:
+#         messages = sorted((await get_messages(conn_id)), key=sort_messages_key)
+
+
 async def refresh_connections():
     global connection_ids, labels
     labels = []
@@ -339,9 +386,10 @@ async def refresh_connections():
         # filter by user
         for conn in conns:
             conn_user = await get_connection_user(conn.get("connection_id", ""))
-            if conn_user == current_user.username:
-                labels = [i.get("their_label", None) for i in conns if i.get("their_label", None) is not None]
-                connection_ids = [i.get("connection_id", None) for i in conns if i.get("connection_id", None) is not None]
+            if conn_user == current_user.username and \
+                    conn.get("their_label", "") != "" and conn.get("connection_id", "") != "":
+                labels.append(conn.get("their_label", ""))
+                connection_ids.append(conn.get("connection_id", ""))
     except:
         print("failed retrieving connections")
 
@@ -372,13 +420,10 @@ def start_web_app():
 
     app.run(debug=True, host=HOST, port=PORT)
 
-    # db.init_app(app)
-    # db.create_all()
-
 
 def start_agent():
     global agent, loop
-    agent = loop.run_until_complete(faber.runFaberAgentForWebApp(get_agent_endpoint()))
+    agent = loop.run_until_complete(server_agent.runServerAgentForWebApp(get_agent_endpoint()))
 
 
 if __name__ == '__main__':
