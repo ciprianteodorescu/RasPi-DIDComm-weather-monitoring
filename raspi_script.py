@@ -87,3 +87,4 @@ if __name__ == "__main__":
         readTSL2561()
         readHW611()
         readDHT22()
+        sleep(1)
