@@ -48,11 +48,11 @@ def initSensors():
     except:
         print("BMP280 sensor not found. Check wiring.")
 
-    # if dht22 is None:
-    try:
-        dht22 = DHT22(board.D4)
-    except:
-        print("DHT22 sensor not found. Check wiring.")
+    if dht22 is None:
+        try:
+            dht22 = DHT22(board.D4)
+        except:
+            print("DHT22 sensor not found. Check wiring.")
 
 
 def readTSL2561():
@@ -66,6 +66,7 @@ def readTSL2561():
         print(f'Lux: {lux}')
         return {"broadband": broadband, "infrared": infrared, "lux": lux}
     except:
+        return {}
         print("\nCould not read TSL2561 data. Check wiring.")
 
 
@@ -78,6 +79,7 @@ def readHW611():
         print(f"Pressure: {pressure}")
         return {"temperature": temperature, "pressure": pressure}
     except:
+        return {}
         print("\nCould not read HW-611 data. Check wiring.")
 
 
