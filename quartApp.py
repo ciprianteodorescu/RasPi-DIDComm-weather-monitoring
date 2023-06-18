@@ -16,7 +16,7 @@ import asyncio
 from threading import Thread
 import json
 
-from utils import get_agent_endpoint
+from utils import get_agent_endpoint, run_in_coroutine
 from demo.runners import server_agent
 
 import nest_asyncio
@@ -101,7 +101,7 @@ async def devices():
     global latest_invitation
 
     try:
-        latest_invitation = json.dumps(run_in_coroutine(generate_invitation())["invitation"])
+        latest_invitation = json.dumps(run_in_coroutine(loop, generate_invitation())["invitation"])
     except:
         latest_invitation = "agent not initialized yet"
 
@@ -211,15 +211,13 @@ async def redirect_to_login(*_):
     return redirect(url_for("login", login_first=True))
 
 
-def run_in_coroutine(task):
-    return loop.run_until_complete(task)
-
-
 @app.route("/get-invitation")
 async def generate_invitation():
     try:
         return run_in_coroutine(
-            agent.generate_invitation(display_qr=False, reuse_connections=agent.reuse_connections, wait=False))
+            loop,
+            agent.generate_invitation(display_qr=False, reuse_connections=agent.reuse_connections, wait=False)
+        )
     except:
         return {}
 
@@ -238,6 +236,7 @@ async def send_message_to_device():
     content = json.dumps(content)
 
     return run_in_coroutine(
+        loop,
         agent.agent.admin_POST(
             f"/connections/{connection_id}/send-message",
             {"content": content},
@@ -248,7 +247,7 @@ async def send_message_to_device():
 @app.route("/connections")
 async def connections():
     try:
-        return run_in_coroutine(agent.admin_GET(f"/connections"))
+        return run_in_coroutine(loop, agent.admin_GET(f"/connections"))
     except:
         return {}
 
@@ -256,7 +255,7 @@ async def connections():
 @app.route("/get-connection/<connection_id>")
 async def get_connection(connection_id):
     try:
-        return run_in_coroutine(agent.admin_GET(f"/connections/{connection_id}"))
+        return run_in_coroutine(loop, agent.admin_GET(f"/connections/{connection_id}"))
     except:
         return {}
 
@@ -264,7 +263,7 @@ async def get_connection(connection_id):
 @app.route("/get-messages/<connection_id>")
 async def get_messages(connection_id):
     try:
-        return run_in_coroutine(agent.admin_GET(f"/connections/{connection_id}/basic-messages"))["results"]
+        return run_in_coroutine(loop, agent.admin_GET(f"/connections/{connection_id}/basic-messages"))["results"]
     except:
         return {}
 
@@ -278,6 +277,7 @@ async def set_connection_location(connection_id):
 
         location_request = {"metadata": {"location": location}}
         return run_in_coroutine(
+            loop,
             agent.agent.admin_POST(
                 f"/connections/{connection_id}/metadata",
                 location_request,
@@ -291,6 +291,7 @@ async def set_connection_location(connection_id):
 async def get_connection_location(connection_id):
     try:
         return run_in_coroutine(
+            loop,
             agent.agent.admin_GET(
                 f"/connections/{connection_id}/metadata",
             )
@@ -308,6 +309,7 @@ async def set_connection_user(connection_id):
 
         user_request = {"metadata": {"user": user}}
         return run_in_coroutine(
+            loop,
             agent.agent.admin_POST(
                 f"/connections/{connection_id}/metadata",
                 user_request,
@@ -321,6 +323,7 @@ async def set_connection_user(connection_id):
 async def get_connection_user(connection_id):
     try:
         return run_in_coroutine(
+            loop,
             agent.agent.admin_GET(
                 f"/connections/{connection_id}/metadata",
             )
@@ -337,6 +340,7 @@ async def set_sensor_types(connection_id):
 
         sensor_types_request = {"metadata": json_args}
         return run_in_coroutine(
+            loop,
             agent.agent.admin_POST(
                 f"/connections/{connection_id}/metadata",
                 sensor_types_request,
@@ -350,6 +354,7 @@ async def set_sensor_types(connection_id):
 async def get_sensor_types(connection_id):
     try:
         return run_in_coroutine(
+            loop,
             agent.agent.admin_GET(
                 f"/connections/{connection_id}/metadata",
             )
@@ -362,6 +367,7 @@ async def get_sensor_types(connection_id):
 async def get_connection_from_did(did):
     try:
         return run_in_coroutine(
+            loop,
             agent.agent.admin_GET(
                 f"/connections", params={"their_did": did}
             )
@@ -382,7 +388,7 @@ async def refresh_connections():
     connection_ids = []
     try:
         # only fetch active connections
-        conns = run_in_coroutine(agent.admin_GET(f"/connections", params={'state': 'active'}))["results"]
+        conns = run_in_coroutine(loop, agent.admin_GET(f"/connections", params={'state': 'active'}))["results"]
         # filter by user
         for conn in conns:
             conn_user = await get_connection_user(conn.get("connection_id", ""))

@@ -26,3 +26,7 @@ def get_agent_endpoint():
         agent_endpoint = os.popen("ip route get 8.8.8.8 | grep -oP 'src \\K[^ ]+'").read().strip()
 
     return agent_endpoint
+
+
+def run_in_coroutine(event_loop, task):
+    return event_loop.run_until_complete(task)
