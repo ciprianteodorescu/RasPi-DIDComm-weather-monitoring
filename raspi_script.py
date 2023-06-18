@@ -2,6 +2,7 @@ import asyncio
 import nest_asyncio
 from demo.runners import raspberry_agent
 from utils import get_agent_endpoint, run_in_coroutine
+import json
 
 # TSL2561 imports
 import board
@@ -92,6 +93,7 @@ def sendMeasuredValues():
         "HW-611": readDHT22(),
         "DHT22": readDHT22(),
     }
+    content = json.dumps(content)
     # try:
     run_in_coroutine(
         loop,
