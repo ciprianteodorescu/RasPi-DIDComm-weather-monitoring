@@ -77,11 +77,12 @@ def readDHT22():
             print(f"Humidity: {humidity}")
             return {"temperature": temperature, "humidity": humidity}
         except RuntimeError as e:
-            if e.args is "A full buffer was not returned. Try again.":
+            if e.args == "A full buffer was not returned. Try again.":
                 print("Waiting for sensor...")
                 sleep(1)
             else:
                 print("Could not read DHT22 data. Check wiring.")
+                return {}
         sleep(1)
 
 
@@ -91,16 +92,16 @@ def sendMeasuredValues():
         "HW-611": readDHT22(),
         "DHT22": readDHT22(),
     }
-    try:
-        run_in_coroutine(
-            loop,
-            agent.agent.admin_POST(
-                f"/connections/{raspberry_agent.agent.connection_id}/send-message",
-                {"content": content},
-            )
+    # try:
+    run_in_coroutine(
+        loop,
+        agent.agent.admin_POST(
+            f"/connections/{raspberry_agent.agent.connection_id}/send-message",
+            {"content": content},
         )
-    except:
-        print("Could not send measured values")
+    )
+    # except:
+    #     print("Could not send measured values")
 
 
 def start_agent():
