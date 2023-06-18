@@ -41,27 +41,27 @@ def initSensors():
 
 def readTSL2561():
     try:
-        print("Reading TSL2561 data")
+        print("\nReading TSL2561 data")
         print(f'Broadband: {tsl2561.broadband}')
         print(f'Infrared: {tsl2561.infrared}')
         print(f'Luminosity: {tsl2561.luminosity}')
     except:
-        print("Could not read TSL2561 data. Check wiring")
+        print("\nCould not read TSL2561 data. Check wiring")
 
 
 def readHW611():
     try:
-        print("Reading HW-611 data")
+        print("\nReading HW-611 data")
         print(f"Temperature: {bmp280.get_temperature()}")
         print(f"Pressure: {bmp280.get_pressure()}")
     except:
-        print("Could not read HW-611 data. Check wiring")
+        print("\nCould not read HW-611 data. Check wiring")
 
 
 def readDHT22():
     # TODO: refactor these try-except blocks
     try:
-        print("Reading DHT22 data")
+        print("\nReading DHT22 data")
         while True:
             try:
                 print(f"Temperature: {dht22.temperature}")
@@ -72,7 +72,7 @@ def readDHT22():
                 sleep(1)
             sleep(1)
     except:
-        print("Could not read DHT22 data. Check wiring")
+        print("\nCould not read DHT22 data. Check wiring")
 
 
 def start_agent():
