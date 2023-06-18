@@ -47,6 +47,7 @@ def readDHT22():
         try:
             print(f"Temperature: {dht22.temperature}")
             print(f"Humidity: {dht22.humidity}")
+            break
         except RuntimeError:
             print("waiting for sensor")
             sleep(1)
