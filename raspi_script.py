@@ -44,9 +44,9 @@ def initSensors():
 
 def readTSL2561():
     try:
-        broadband = tsl2561.broadband
-        infrared = tsl2561.infrared
-        lux = tsl2561.lux
+        broadband = round(tsl2561.broadband, 2)
+        infrared = round(tsl2561.infrared, 2)
+        lux = round(tsl2561.lux, 2)
         print("\nReading TSL2561 data")
         print(f'Broadband: {broadband}')
         print(f'Infrared: {infrared}')
@@ -58,8 +58,8 @@ def readTSL2561():
 
 def readHW611():
     try:
-        temperature = bmp280.get_temperature()
-        pressure = bmp280.get_pressure()
+        temperature = round(bmp280.get_temperature(), 2)
+        pressure = round(bmp280.get_pressure(), 2)
         print("\nReading HW-611 data")
         print(f"Temperature: {temperature}")
         print(f"Pressure: {pressure}")
@@ -72,8 +72,8 @@ def readDHT22():
     print("\nReading DHT22 data")
     while True:
         try:
-            temperature = dht22.temperature
-            humidity = dht22.humidity
+            temperature = round(dht22.temperature, 2)
+            humidity = round(dht22.humidity, 2)
             print(f"Temperature: {temperature}")
             print(f"Humidity: {humidity}")
             return {"temperature": temperature, "humidity": humidity}
