@@ -25,21 +25,34 @@ loop = asyncio.new_event_loop()
 asyncio.set_event_loop(loop)
 
 tsl2561 = None
-bmp280 = None
+hw611 = None
 dht22 = None
 
 agent: raspberry_agent.RaspberryAgent = None
 
 
 def initSensors():
-    global tsl2561, bmp280, dht22
-    i2c = busio.I2C(board.SCL, board.SDA)
-    tsl2561 = TSL2561(i2c)
+    global tsl2561, hw611, dht22
 
-    bus = SMBus(1)
-    bmp280 = BMP280(i2c_dev=bus)
+    if tsl2561 is None:
+        try:
+            i2c = busio.I2C(board.SCL, board.SDA)
+            tsl2561 = TSL2561(i2c)
+        except:
+            print("TSL2561 sensor not found. Check wiring.")
 
-    dht22 = DHT22(board.D4)
+    if hw611 is None:
+        try:
+            bus = SMBus(1)
+            hw611 = BMP280(i2c_dev=bus)
+        except:
+            print("BMP280 sensor not found. Check wiring.")
+
+    if dht22 is None:
+        try:
+            dht22 = DHT22(board.D4)
+        except:
+            print("DHT22 sensor not found. Check wiring.")
 
 
 def readTSL2561():
@@ -58,8 +71,8 @@ def readTSL2561():
 
 def readHW611():
     try:
-        temperature = round(bmp280.get_temperature(), 2)
-        pressure = round(bmp280.get_pressure(), 2)
+        temperature = round(hw611.get_temperature(), 2)
+        pressure = round(hw611.get_pressure(), 2)
         print("\nReading HW-611 data")
         print(f"Temperature: {temperature}")
         print(f"Pressure: {pressure}")
@@ -114,7 +127,8 @@ def start_agent():
 if __name__ == "__main__":
     # TODO: check if postgres docker container is running, if not start it
     start_agent()
-    initSensors()
     while True:
+        if tsl2561 is None or hw611 is None or dht22 is None:
+            initSensors()
         sendMeasuredValues()
         sleep(1)
