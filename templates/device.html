@@ -5,15 +5,6 @@
 {% block content %}
     <div class="container-fluid">
         <div class="row">
-            <div class="col-md-4">
-                <div class="location-container">
-                    <div class="form-group">
-                        <label for="new_location">Location:</label>
-                        <input type="text" id="new_location" name="new_location" value="{{ location }}" class="form-control" placeholder="No location set">
-                    </div>
-                    <button onclick="setLocation('{{ connection['connection_id'] }}', new_location)" class="btn btn-primary">Update location</button>
-                </div>
-            </div>
             <!--<div class="col-md-4">
                 <div class="location-container">
                     <div class="form-group">
@@ -25,7 +16,7 @@
                 </div>
             </div>-->
             <div class="col-md-4">
-                <div class="select-sensors-container">
+                <div class="options-container">
                     <label>Select connected sensors:</label><br />
                     <ul class="sensor-list">
                         <li>
@@ -42,6 +33,16 @@
                         </li>
                     </ul>
                     <button class="btn btn-primary" onclick='setConnectedSensors("{{ connection["connection_id"] }}")'>Submit</button>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="options-container">
+                    <div class="form-group">
+                        <label for="new_location">Location:</label>
+                        <input type="text" id="new_location" name="new_location" value="{{ location }}" class="form-control" placeholder="No location set">
+                    </div>
+                    <button onclick="setLocation('{{ connection['connection_id'] }}', new_location)" class="btn btn-primary">Update location</button>
                 </div>
             </div>
         </div>

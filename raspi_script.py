@@ -50,9 +50,9 @@ def readTSL2561():
         print(f'Broadband: {broadband}')
         print(f'Infrared: {infrared}')
         print(f'Lux: {lux}')
-        return broadband, infrared, lux
+        return {"broadband": broadband, "infrared": infrared, "lux": lux}
     except:
-        print("\nCould not read TSL2561 data. Check wiring")
+        print("\nCould not read TSL2561 data. Check wiring.")
 
 
 def readHW611():
@@ -62,28 +62,27 @@ def readHW611():
         print("\nReading HW-611 data")
         print(f"Temperature: {temperature}")
         print(f"Pressure: {pressure}")
-        return temperature, pressure
+        return {"temperature": temperature, "pressure": pressure}
     except:
-        print("\nCould not read HW-611 data. Check wiring")
+        print("\nCould not read HW-611 data. Check wiring.")
 
 
 def readDHT22():
-    # TODO: refactor these try-except blocks
-    try:
-        print("\nReading DHT22 data")
-        while True:
-            temperature = dht22.temperature
-            humidity = dht22.humidity
-            try:
-                print(f"Temperature: {temperature}")
-                print(f"Humidity: {humidity}")
-                return temperature, humidity
-            except RuntimeError:
-                print("waiting for sensor")
+    print("\nReading DHT22 data")
+    while True:
+        temperature = dht22.temperature
+        humidity = dht22.humidity
+        try:
+            print(f"Temperature: {temperature}")
+            print(f"Humidity: {humidity}")
+            return {"temperature": temperature, "humidity": humidity}
+        except RuntimeError as e:
+            if e.args is "A full buffer was not returned. Try again.":
+                print("Waiting for sensor...")
                 sleep(1)
-            sleep(1)
-    except:
-        print("\nCould not read DHT22 data. Check wiring")
+            else:
+                print("Could not read DHT22 data. Check wiring.")
+        sleep(1)
 
 
 def sendMeasuredValues():
