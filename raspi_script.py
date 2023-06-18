@@ -44,7 +44,7 @@ def readTSL2561():
         print("\nReading TSL2561 data")
         print(f'Broadband: {tsl2561.broadband}')
         print(f'Infrared: {tsl2561.infrared}')
-        print(f'Luminosity: {tsl2561.luminosity}')
+        print(f'Lux: {tsl2561.lux}')
     except:
         print("\nCould not read TSL2561 data. Check wiring")
 
