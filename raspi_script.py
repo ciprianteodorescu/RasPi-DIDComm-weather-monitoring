@@ -70,9 +70,9 @@ def readHW611():
 def readDHT22():
     print("\nReading DHT22 data")
     while True:
-        temperature = dht22.temperature
-        humidity = dht22.humidity
         try:
+            temperature = dht22.temperature
+            humidity = dht22.humidity
             print(f"Temperature: {temperature}")
             print(f"Humidity: {humidity}")
             return {"temperature": temperature, "humidity": humidity}
