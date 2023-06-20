@@ -66,8 +66,8 @@ def readTSL2561():
         print(f'Lux: {lux}')
         return {"broadband": broadband, "infrared": infrared, "lux": lux}
     except:
-        return {}
         print("\nCould not read TSL2561 data. Check wiring.")
+        return {}
 
 
 def readHW611():
@@ -79,8 +79,8 @@ def readHW611():
         print(f"Pressure: {pressure}")
         return {"temperature": temperature, "pressure": pressure}
     except:
-        return {}
         print("\nCould not read HW-611 data. Check wiring.")
+        return {}
 
 
 def readDHT22():

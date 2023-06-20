@@ -10,13 +10,22 @@
                     <label>Select connected sensors:</label>
                     <ul class="sensors-list">
                         <li class="checkbox">
-                            <label for="tsl2561_sensor"><input type="checkbox" id="tsl2561_sensor" name="tsl2561_sensor" checked/>TSL2561 - Luminosity Sensor</label>
+                            <label for="tsl2561_sensor">
+                                <input type="checkbox" id="tsl2561_sensor" name="tsl2561_sensor" checked/>
+                                TSL2561 - Luminosity Sensor
+                            </label>
                         </li>
                         <li class="checkbox">
-                            <label for="hw611_sensor"><input type="checkbox" id="hw611_sensor" name="hw611_sensor" checked/>HW-611 - Pressure, Temperature Sensor</label>
+                            <label for="hw611_sensor">
+                                <input type="checkbox" id="hw611_sensor" name="hw611_sensor" checked/>
+                                HW-611 - Pressure, Temperature Sensor
+                            </label>
                         </li>
                         <li class="checkbox">
-                            <label for="dht22_sensor"><input type="checkbox" id="dht22_sensor" name="dht22_sensor" checked/>DHT22 - Temperature, Humidity Sensor</label>
+                            <label for="dht22_sensor">
+                                <input type="checkbox" id="dht22_sensor" name="dht22_sensor" checked/>
+                                DHT22 - Temperature, Humidity Sensor
+                            </label>
                         </li>
                     </ul>
                 </div>
@@ -81,33 +90,6 @@
             location: new_location.value,
         });
         fetch("/set-connection-location/" + connId, {
-            method: "POST",
-            body: body
-        });
-    }
-
-    function setUser(connId, new_user) {
-        const body = JSON.stringify({
-            user: new_user.value,
-        });
-        fetch("/set-connection-user/" + connId, {
-            method: "POST",
-            body: body
-        });
-    }
-
-    function getRandomInt(max) {
-        return Math.floor(Math.random() * max)
-    }
-
-    function pySend(connId) {
-        const body = JSON.stringify({
-            connection_id: connId,
-            temp: getRandomInt(30),
-            humidity: getRandomInt(100),
-            wind: getRandomInt(50),
-        });
-        fetch("/send-message", {
             method: "POST",
             body: body
         });

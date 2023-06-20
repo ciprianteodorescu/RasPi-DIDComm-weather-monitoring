@@ -352,11 +352,7 @@ async def get_measured_values(connection_id):
     timestamps = [m["sent_time"] for m in messages]
 
     values = [m["content"] for m in messages]
-    lux_array = {}
-    temp_hw611_array = {}
-    pressure_array = {}
-    temp_dht22_array = {}
-    humidity_array = {}
+    lux_array, temp_hw611_array, pressure_array, temp_dht22_array, humidity_array = {}, {}, {}, {}, {}
     for i in range(len(values)):
         # this try-except block is needed in case (some) messages are not json formatted
         try:
