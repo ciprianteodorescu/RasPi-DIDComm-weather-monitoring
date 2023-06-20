@@ -90,7 +90,7 @@ asyncio.set_event_loop(loop)
 @app.route("/")
 @app.route("/home")
 async def home():
-    await get_last_values()
+    await get_last_measured_values()
 
     return await render_template_with_base_variables('home.html')
 
@@ -394,7 +394,6 @@ async def get_measured_values(connection_id):
 
 @app.route("/get-last-measured-values")
 async def get_last_measured_values():
-    
     for conn_id in connection_ids:
         messages = await get_messages(conn_id)
 
