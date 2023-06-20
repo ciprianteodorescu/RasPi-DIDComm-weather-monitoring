@@ -3,11 +3,25 @@
 {% block title %}Home{% endblock %}
 
 {% block content %}
+    {% if username %}
+        <h4 style="margin-top: 0px;">Welcome, {{ username }}!</h4>
+    {% else %}
+        <h4 style="margin-top: 0px;">Log in or sign up!</h4>
+    {% endif %}
+{% endblock %}
 
-{% if username %}
-    <h4 style="margin-top: 0px;">Welcome, {{ username }}!</h4>
-{% else %}
-    <h4 style="margin-top: 0px;">Log in or sign up!</h4>
-{% endif %}
+{% block script %}
+<script>
+    function getLastMeasuredValues() {
+        const response = await fetch("/get-last-measured-values", {
+                method: "GET",
+        });
+        const lastValues = await response.json();
 
+    }
+
+    window.onload = function() {
+
+    };
+</script>
 {% endblock %}

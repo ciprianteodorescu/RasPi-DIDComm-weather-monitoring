@@ -86,27 +86,20 @@ agent: server_agent.ServerAgent = None
 loop = asyncio.new_event_loop()
 asyncio.set_event_loop(loop)
 
-latest_invitation = ""
-
 
 @app.route("/")
 @app.route("/home")
 async def home():
+    await get_last_values()
+
     return await render_template_with_base_variables('home.html')
 
 
 @app.route("/devices")
 @login_required
 async def devices():
-    global latest_invitation
-
-    try:
-        latest_invitation = json.dumps(run_in_coroutine(loop, generate_invitation())["invitation"])
-    except:
-        latest_invitation = "agent not initialized yet"
-
     if agent is not None:
-        return await render_template_with_base_variables('devices.html', invitation=latest_invitation)
+        return await render_template_with_base_variables('devices.html')
 
 
 @app.route("/devices/<connection_id>")
@@ -114,32 +107,9 @@ async def devices():
 async def device(connection_id):
     connection = await get_connection(connection_id)
     location = await get_connection_location(connection_id)
-    messages = sorted((await get_messages(connection_id)), key=sort_messages_key)
-    timestamps = [m["sent_time"] for m in messages]
 
-    values = [m["content"] for m in messages]
-    temp_array = {}
-    humidity_array = {}
-    wind_array = {}
-    for i in range(len(values)):
-        # this try-except block is needed in case (some) messages are not json formatted
-        try:
-            json_values = json.loads(values[i])
-            temp = json_values["temp"] if "temp" in json_values.keys() else None
-            humidity = json_values["humidity"] if "humidity" in json_values.keys() else None
-            wind = json_values["wind"] if "wind" in json_values.keys() else None
-            if temp is not None:
-                temp_array[timestamps[i]] = temp
-            if humidity is not None:
-                humidity_array[timestamps[i]] = humidity
-            if wind is not None:
-                wind_array[timestamps[i]] = wind
-        except:
-            pass
-
-    return await render_template_with_base_variables("device.html", connection=connection, temp_array=temp_array,
-                                                     humidity_array=humidity_array, wind_array=wind_array,
-                                                     location=location if location != "{}" else "")
+    return await render_template_with_base_variables("device.html", connection=connection,
+                                                     location=location if location != {} else "")
 
 
 @app.route("/signup")
@@ -376,10 +346,109 @@ async def get_connection_from_did(did):
         return ""
 
 
-# @app.route("/get-last-values")
-# async def get_last_values():
-#     for conn_id in connection_ids:
-#         messages = sorted((await get_messages(conn_id)), key=sort_messages_key)
+@app.route("/get-measured-values/<connection_id>")
+async def get_measured_values(connection_id):
+    messages = sorted((await get_messages(connection_id)), key=sort_messages_key)
+    timestamps = [m["sent_time"] for m in messages]
+
+    values = [m["content"] for m in messages]
+    lux_array = {}
+    temp_hw611_array = {}
+    pressure_array = {}
+    temp_dht22_array = {}
+    humidity_array = {}
+    for i in range(len(values)):
+        # this try-except block is needed in case (some) messages are not json formatted
+        try:
+            json_values = json.loads(values[i])
+            tsl2561 = json_values["TSL2561"]
+            hw611 = json_values["HW-611"]
+            dht22 = json_values["DHT22"]
+
+            lux = tsl2561["lux"] if "lux" in tsl2561.keys() else None
+            temperature_hw611 = hw611["temperature"] if "temperature" in hw611.keys() else None
+            pressure = hw611["pressure"] if "pressure" in hw611.keys() else None
+            temperature_dht22 = dht22["temperature"] if "temperature" in dht22.keys() else None
+            humidity = dht22["humidity"] if "humidity" in dht22.keys() else None
+
+            if lux is not None:
+                lux_array[timestamps[i]] = lux
+            if temperature_hw611 is not None:
+                temp_hw611_array[timestamps[i]] = temperature_hw611
+            if pressure is not None:
+                pressure_array[timestamps[i]] = pressure
+            if temperature_dht22 is not None:
+                temp_dht22_array[timestamps[i]] = temperature_dht22
+            if humidity is not None:
+                humidity_array[timestamps[i]] = humidity
+        except:
+            pass
+    return {
+        "lux_array": lux_array,
+        "temp_hw611_array": temp_hw611_array,
+        "pressure_array": pressure_array,
+        "temp_dht22_array": temp_dht22_array,
+        "humidity_array": humidity_array,
+    }
+
+
+@app.route("/get-last-measured-values")
+async def get_last_measured_values():
+    
+    for conn_id in connection_ids:
+        messages = await get_messages(conn_id)
+
+        lux = None
+        temp_hw611 = None
+        pressure = None
+        temp_dht22 = None
+        humidity = None
+
+        lux_time = ""
+        temp_hw611_time = ""
+        pressure_time = ""
+        temp_dht22_time = ""
+        humidity_time = ""
+
+        for m in messages:
+            timestamp = m["sent_time"]
+
+            if timestamp >= lux_time or timestamp >= temp_hw611_time or timestamp >= pressure_time \
+                    or timestamp >= temp_dht22_time or timestamp >= humidity_time:
+                values = m["content"]
+                json_values = json.loads(values)
+
+                if timestamp >= lux_time:
+                    tsl2561 = json_values["TSL2561"]
+                    if "lux" in tsl2561.keys():
+                        lux = tsl2561["lux"]
+                        lux_time = timestamp
+
+                if timestamp >= temp_hw611_time or timestamp >= pressure_time:
+                    hw611 = json_values["HW-611"]
+                    if "temperature" in hw611.keys():
+                        temp_hw611 = hw611["temperature"]
+                        temp_hw611_time = timestamp
+                    if "pressure" in hw611.keys():
+                        pressure = hw611["pressure"]
+                        pressure_time = timestamp
+
+                if timestamp >= temp_dht22_time or timestamp >= humidity_time:
+                    dht22 = json_values["DHT22"]
+                    if "temperature" in dht22.keys():
+                        temp_dht22 = dht22["temperature"]
+                        temp_dht22_time = timestamp
+                    if "humidity" in dht22.keys():
+                        humidity = dht22["humidity"]
+                        humidity_time = timestamp
+
+        return {
+            "lux": {lux_time: lux},
+            "temp_hw611": {temp_hw611_time: temp_hw611},
+            "pressure": {pressure_time: pressure},
+            "temp_dht22": {temp_dht22_time: temp_dht22},
+            "humidity": {humidity_time: humidity},
+        }
 
 
 async def refresh_connections():
