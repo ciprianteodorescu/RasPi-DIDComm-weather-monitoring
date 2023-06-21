@@ -152,4 +152,4 @@ if __name__ == "__main__":
     while True:
         initSensors()
         sendMeasuredValues()
-        sleep(1)
+        sleep(5)
