@@ -22,7 +22,7 @@
 
         <div>
             <div class="dropdown">
-                <a id="user" class="top-bar-child dropdown-button" href="/login" >User</a>
+                <a id="user" class="top-bar-child dropdown-button" href="{% if username %}/{% else %}/login{% endif %}" >User</a>
                 <div class="dropdown-content">
                     {% if username %}
                         <a id="logout" href="/logout">Log out</a>

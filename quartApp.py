@@ -90,8 +90,6 @@ asyncio.set_event_loop(loop)
 @app.route("/")
 @app.route("/home")
 async def home():
-    await get_last_measured_values()
-
     return await render_template_with_base_variables('home.html')
 
 
@@ -373,9 +371,9 @@ async def get_measured_values(connection_id):
                 temp_hw611_array[timestamps[i]] = temperature_hw611
             if pressure is not None:
                 pressure_array[timestamps[i]] = pressure
-            if temperature_dht22 is not None:
+            if temperature_dht22 is not None and temperature_dht22 != 0:
                 temp_dht22_array[timestamps[i]] = temperature_dht22
-            if humidity is not None:
+            if humidity is not None and humidity != 0:
                 humidity_array[timestamps[i]] = humidity
         except:
             pass

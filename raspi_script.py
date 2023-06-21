@@ -24,6 +24,9 @@ nest_asyncio.apply()
 loop = asyncio.new_event_loop()
 asyncio.set_event_loop(loop)
 
+i2c = None
+bus = None
+
 tsl2561 = None
 hw611 = None
 dht22 = None
@@ -32,9 +35,24 @@ agent: raspberry_agent.RaspberryAgent = None
 
 
 def initSensors():
+    global i2c, bus
     global tsl2561, hw611, dht22
 
-    # if tsl2561 is None:
+    try:
+        i2c.deinit()
+    except:
+        pass
+
+    try:
+        bus.close()
+    except:
+        pass
+
+    try:
+        dht22.exit()
+    except:
+        pass
+
     try:
         i2c = busio.I2C(board.SCL, board.SDA)
         tsl2561 = TSL2561(i2c)
