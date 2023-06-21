@@ -95,14 +95,6 @@
         });
     }
 
-    function timestampsToDates(timestamps) {
-        const today = new Date().toDateString();
-        for(let i = 0; i < timestamps.length; i++) {
-            timestamps[i] = parseFloat(timestamps[i]);
-        }
-        return timestamps;
-    }
-
     function getChartOptionsWithMeasurementUnit(label) {
         return {
             scales: {
@@ -146,7 +138,7 @@
             return array;
         }
 
-        return Object.fromEntries(Object.entries(array).filter(([key]) => new Date(Date.parse(key)) >= time));
+        return Object.fromEntries(Object.entries(array).filter(([timestamp]) => new Date(parseFloat(timestamp)) >= time));
     }
 
     async function computeCharts() {
@@ -167,21 +159,19 @@
         const arrays = await response.json();
 
         const luxValues = Object.values(arrays.lux_array);
-        const luxTimestamps = Object.keys(arrays.lux_array).map(timestamp => new Date(parseFloat(timestamp)));;
+        const luxTimestamps = Object.keys(arrays.lux_array).map(timestamp => new Date(parseFloat(timestamp)));
 
         const tempValuesHw611 = Object.values(arrays.temp_hw611_array);
-        const tempTimestampsHw611 = Object.keys(arrays.temp_hw611_array).map(timestamp => new Date(parseFloat(timestamp)));;
+        const tempTimestampsHw611 = Object.keys(arrays.temp_hw611_array).map(timestamp => new Date(parseFloat(timestamp)));
 
         const pressureValues = Object.values(arrays.pressure_array);
-        const pressureTimestamps = Object.keys(arrays.pressure_array).map(timestamp => new Date(parseFloat(timestamp)));;
+        const pressureTimestamps = Object.keys(arrays.pressure_array).map(timestamp => new Date(parseFloat(timestamp)));
 
         const tempValuesDht22 = Object.values(arrays.temp_dht22_array);
-        const tempTimestampsDht22 = Object.keys(arrays.temp_dht22_array).map(timestamp => new Date(parseFloat(timestamp)));;
+        const tempTimestampsDht22 = Object.keys(arrays.temp_dht22_array).map(timestamp => new Date(parseFloat(timestamp)));
 
         const humidityValues = Object.values(arrays.humidity_array);
-        const humidityTimestamps = Object.keys(arrays.humidity_array).map(timestamp => new Date(parseFloat(timestamp)));;
-
-        console.log(luxTimestamps);
+        const humidityTimestamps = Object.keys(arrays.humidity_array).map(timestamp => new Date(parseFloat(timestamp)));
 
         const luxData = {
             labels: luxTimestamps,
@@ -322,7 +312,7 @@
 
 
         const luxData = {
-            labels: timestampsToDates(Object.keys(lux_array)),
+            labels: Object.keys(lux_array).map(timestamp => new Date(parseFloat(timestamp))),
             datasets: [{
                 label: 'Lux',
                 data: Object.values(lux_array),
@@ -331,7 +321,7 @@
             }]
         };
         const tempDataHw611 = {
-            labels: timestampsToDates(Object.keys(temp_hw611_array)),
+            labels: Object.keys(temp_hw611_array).map(timestamp => new Date(parseFloat(timestamp))),
             datasets: [{
                 label: 'Temperature',
                 data: Object.values(temp_hw611_array),
@@ -340,7 +330,7 @@
             }]
         };
         const pressureData = {
-            labels: timestampsToDates(Object.keys(pressure_array)),
+            labels: Object.keys(pressure_array).map(timestamp => new Date(parseFloat(timestamp))),
             datasets: [{
                 label: 'Pressure',
                 data: Object.values(pressure_array),
@@ -349,7 +339,7 @@
             }]
         };
         const tempDataDht22 = {
-            labels: timestampsToDates(Object.keys(temp_dht22_array)),
+            labels: Object.keys(temp_dht22_array).map(timestamp => new Date(parseFloat(timestamp))),
             datasets: [{
                 label: 'Temperature',
                 data: Object.values(temp_dht22_array),
@@ -358,7 +348,7 @@
             }]
         };
         const humidityData = {
-            labels: timestampsToDates(Object.keys(humidity_array)),
+            labels: Object.keys(humidity_array).map(timestamp => new Date(parseFloat(timestamp))),
             datasets: [{
                 label: 'Humidity',
                 data: Object.values(humidity_array),

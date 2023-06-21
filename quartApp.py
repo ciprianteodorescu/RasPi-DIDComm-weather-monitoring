@@ -11,6 +11,7 @@ from quart_sqlalchemy.framework import QuartSQLAlchemy
 
 from werkzeug.security import generate_password_hash, check_password_hash
 import datetime as dt
+from time import sleep
 from dateutil import parser as date_parser
 import locale
 import asyncio
@@ -366,16 +367,19 @@ async def get_measured_values(connection_id):
             temperature_dht22 = dht22["temperature"] if "temperature" in dht22.keys() else None
             humidity = dht22["humidity"] if "humidity" in dht22.keys() else None
 
-            timestamp = float(date_parser.parse(timestamps[i]).timestamp()) * 1000
+            if "timestamp" in json_values.keys():
+                timestamp = json_values["timestamp"]
+            else:
+                timestamp = float(date_parser.parse(timestamps[i]).timestamp()) * 1000
             if lux is not None:
                 lux_array[timestamp] = lux
             if temperature_hw611 is not None:
                 temp_hw611_array[timestamp] = temperature_hw611
             if pressure is not None:
                 pressure_array[timestamp] = pressure
-            if temperature_dht22 is not None and temperature_dht22 != 0:
+            if temperature_dht22 is not None and temperature_dht22 != 0 and temperature_dht22 < 50:
                 temp_dht22_array[timestamp] = temperature_dht22
-            if humidity is not None and humidity != 0:
+            if humidity is not None and humidity != 0 and humidity < 90:
                 humidity_array[timestamp] = humidity
         except:
             pass
@@ -479,6 +483,13 @@ async def render_template_with_base_variables(template: Union[str, List[str]], *
                                  connection_ids=connection_ids, date=get_current_date(), **context)
 
 
+def read_messages_periodically():
+    while True:
+        for conn_id in connection_ids:
+            run_in_coroutine(loop, get_messages(conn_id))
+        sleep(5)
+
+
 def start_web_app():
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///db.sqlite'
 
@@ -498,4 +509,6 @@ def start_agent():
 
 if __name__ == '__main__':
     Thread(target=start_agent).start()
+    Thread(target=read_messages_periodically).start()
     start_web_app()
+    # read_messages_periodically()

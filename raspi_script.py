@@ -16,7 +16,7 @@ from bmp280 import BMP280
 # DHT22 imports
 # import board
 from adafruit_dht import DHT22
-from time import sleep
+from time import sleep, time
 
 
 nest_asyncio.apply()
@@ -127,6 +127,7 @@ def sendMeasuredValues():
         "TSL2561": readTSL2561(),
         "HW-611": readHW611(),
         "DHT22": readDHT22(),
+        "timestamp": time() * 1000,
     }
     content = json.dumps(content)
     try:
