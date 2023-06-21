@@ -11,6 +11,7 @@ from quart_sqlalchemy.framework import QuartSQLAlchemy
 
 from werkzeug.security import generate_password_hash, check_password_hash
 import datetime as dt
+from dateutil import parser as date_parser
 import locale
 import asyncio
 from threading import Thread
@@ -365,16 +366,17 @@ async def get_measured_values(connection_id):
             temperature_dht22 = dht22["temperature"] if "temperature" in dht22.keys() else None
             humidity = dht22["humidity"] if "humidity" in dht22.keys() else None
 
+            timestamp = float(date_parser.parse(timestamps[i]).timestamp()) * 1000
             if lux is not None:
-                lux_array[timestamps[i]] = lux
+                lux_array[timestamp] = lux
             if temperature_hw611 is not None:
-                temp_hw611_array[timestamps[i]] = temperature_hw611
+                temp_hw611_array[timestamp] = temperature_hw611
             if pressure is not None:
-                pressure_array[timestamps[i]] = pressure
+                pressure_array[timestamp] = pressure
             if temperature_dht22 is not None and temperature_dht22 != 0:
-                temp_dht22_array[timestamps[i]] = temperature_dht22
+                temp_dht22_array[timestamp] = temperature_dht22
             if humidity is not None and humidity != 0:
-                humidity_array[timestamps[i]] = humidity
+                humidity_array[timestamp] = humidity
         except:
             pass
     return {
