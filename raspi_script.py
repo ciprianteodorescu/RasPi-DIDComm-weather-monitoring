@@ -59,18 +59,16 @@ def initSensors():
     except:
         print("TSL2561 sensor not found. Check wiring.")
 
-    # if hw611 is None:
     try:
         bus = SMBus(1)
         hw611 = BMP280(i2c_dev=bus)
     except:
         print("BMP280 sensor not found. Check wiring.")
 
-    if dht22 is None:
-        try:
-            dht22 = DHT22(board.D4)
-        except:
-            print("DHT22 sensor not found. Check wiring.")
+    try:
+        dht22 = DHT22(board.D4)
+    except:
+        print("DHT22 sensor not found. Check wiring.")
 
 
 def readTSL2561():
