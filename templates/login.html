@@ -8,6 +8,15 @@
             <p>You must log in first!</p>
         </div>
     {% endif %}
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            {% for message in messages %}
+                <div>
+                    <p>{{ message }}</p>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
     <div>
         <form method="post" action="/login">
             <input type="text" name="username" placeholder="Username" autofocus="">

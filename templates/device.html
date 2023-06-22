@@ -80,11 +80,27 @@
                 <canvas id="humidityChart"></canvas>
             </div>
         </div>
+
+        <div class="remove-device">
+            <p>Do you want to remove this device?</p>
+            <button onclick="removeDevice('{{ connection['connection_id'] }}')" class="btn btn-danger">Remove</button>
+        </div>
     </div>
 {% endblock %}
 
 {% block script %}
 <script>
+    function removeDevice(connId) {
+        const confirmation = confirm("Are you sure you want to remove this device?");
+        if (confirmation) {
+            fetch("/delete-connection/" + connId, {
+                method: "GET",
+            });
+            baseURL = window.location.href.slice(0, -37);
+            window.location.href = baseURL;
+        }
+    }
+
     function setLocation(connId, new_location) {
         const body = JSON.stringify({
             location: new_location.value,
@@ -100,6 +116,13 @@
             scales: {
                 x: {
                     type: 'time',
+                    display: true,
+                    ticks: {
+                        autoSkip: false,
+                        major: {
+                            enabled: true,
+                        },
+                    },
                 },
                 y: {
                     beginAtZero: false,

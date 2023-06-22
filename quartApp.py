@@ -80,7 +80,6 @@ db.create_all()
 HOST = '0.0.0.0'
 PORT = 5040
 
-USER = "Ciprian"
 labels = []
 connection_ids = []
 agent: server_agent.ServerAgent = None
@@ -98,8 +97,7 @@ async def home():
 @app.route("/devices")
 @login_required
 async def devices():
-    if agent is not None:
-        return await render_template_with_base_variables('devices.html')
+    return await render_template_with_base_variables('devices.html')
 
 
 @app.route("/devices/<connection_id>")
@@ -157,10 +155,11 @@ async def post_login():
         await flash(f"No user found with username {username}!")
     elif check_password_hash(user.password, password):
         login_user(AuthUser(user.id))
+        return redirect(url_for("home"))
     else:
         await flash("Incorrect password!")
 
-    return redirect(url_for("home"))
+    return await render_template_with_base_variables("login.html")
 
 
 @app.route("/logout")
@@ -182,7 +181,7 @@ async def redirect_to_login(*_):
 
 
 @app.route("/get-invitation")
-async def generate_invitation():
+async def get_invitation():
     try:
         return run_in_coroutine(
             loop,
@@ -193,7 +192,7 @@ async def generate_invitation():
 
 
 @app.route("/send-message", methods=['POST'])
-async def send_message_to_device():
+async def send_message():
     args = await request.get_data()
     json_args = json.loads(args.decode("utf-8"))
     connection_id = json_args["connection_id"]
@@ -450,6 +449,15 @@ async def get_last_measured_values():
         }
 
 
+@app.route("/delete-connection/<connection_id>")
+async def delete_connection(connection_id):
+    try:
+        return run_in_coroutine(loop, agent.agent.admin_DELETE(f"/connections/{connection_id}"))
+    except:
+        print(f"Error trying to delete connection {connection_id}")
+        return {}
+
+
 async def refresh_connections():
     global connection_ids, labels
     labels = []
@@ -511,4 +519,3 @@ if __name__ == '__main__':
     Thread(target=start_agent).start()
     Thread(target=read_messages_periodically).start()
     start_web_app()
-    # read_messages_periodically()
