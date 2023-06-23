@@ -517,5 +517,5 @@ def start_agent():
 
 if __name__ == '__main__':
     Thread(target=start_agent).start()
-    Thread(target=read_messages_periodically).start()
+    # Thread(target=read_messages_periodically).start()
     start_web_app()

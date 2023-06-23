@@ -52,6 +52,7 @@
                             <option value="all" selected>All</option>
                         </select>
                     </div>
+                    <button onclick="updateChartsValues()" class="btn btn-primary">Refresh values</button>
                 </div>
             </div>
         </div>
@@ -122,6 +123,13 @@
                         major: {
                             enabled: true,
                         },
+                        font: function(context) {
+                            if (context.tick && context.tick.major) {
+                                return {
+                                    weight: 'bold',
+                                };
+                            }
+                        },
                     },
                 },
                 y: {
@@ -180,6 +188,12 @@
                 method: "GET",
         });
         const arrays = await response.json();
+
+        lux_array = arrays.lux_array;
+        temp_hw611_array = arrays.temp_hw611_array;
+        pressure_array = arrays.pressure_array;
+        temp_dht22_array = arrays.temp_dht22_array;
+        humidity_array = arrays.humidity_array;
 
         const luxValues = Object.values(arrays.lux_array);
         const luxTimestamps = Object.keys(arrays.lux_array).map(timestamp => new Date(parseFloat(timestamp)));
@@ -320,61 +334,53 @@
         chartsContainer.style.display = 'none';
         loadingContainer.style.display = 'flex';
 
-        const response = await fetch("/get-measured-values/" + '{{ connection["connection_id"] }}', {
-                method: "GET",
-        });
-        const arrays = await response.json();
-
-        let lux_array, temp_hw611_array, pressure_array, temp_dht22_array, humidity_array;
-
-        lux_array = filterArrayByTime(arrays.lux_array, time_range);
-        temp_hw611_array = filterArrayByTime(arrays.temp_hw611_array, time_range);
-        pressure_array = filterArrayByTime(arrays.pressure_array, time_range);
-        temp_dht22_array = filterArrayByTime(arrays.temp_dht22_array, time_range);
-        humidity_array = filterArrayByTime(arrays.humidity_array, time_range);
-
+        filtered_lux_array = filterArrayByTime(lux_array, time_range);
+        filtered_temp_hw611_array = filterArrayByTime(temp_hw611_array, time_range);
+        filtered_pressure_array = filterArrayByTime(pressure_array, time_range);
+        filtered_temp_dht22_array = filterArrayByTime(temp_dht22_array, time_range);
+        filtered_humidity_array = filterArrayByTime(humidity_array, time_range);
 
         const luxData = {
-            labels: Object.keys(lux_array).map(timestamp => new Date(parseFloat(timestamp))),
+            labels: Object.keys(filtered_lux_array).map(timestamp => new Date(parseFloat(timestamp))),
             datasets: [{
                 label: 'Lux',
-                data: Object.values(lux_array),
+                data: Object.values(filtered_lux_array),
                 borderWidth: 1,
                 borderColor: 'red'
             }]
         };
         const tempDataHw611 = {
-            labels: Object.keys(temp_hw611_array).map(timestamp => new Date(parseFloat(timestamp))),
+            labels: Object.keys(filtered_temp_hw611_array).map(timestamp => new Date(parseFloat(timestamp))),
             datasets: [{
                 label: 'Temperature',
-                data: Object.values(temp_hw611_array),
+                data: Object.values(filtered_temp_hw611_array),
                 borderWidth: 1,
                 borderColor: 'red'
             }]
         };
         const pressureData = {
-            labels: Object.keys(pressure_array).map(timestamp => new Date(parseFloat(timestamp))),
+            labels: Object.keys(filtered_pressure_array).map(timestamp => new Date(parseFloat(timestamp))),
             datasets: [{
                 label: 'Pressure',
-                data: Object.values(pressure_array),
+                data: Object.values(filtered_pressure_array),
                 borderWidth: 1,
                 borderColor: 'red'
             }]
         };
         const tempDataDht22 = {
-            labels: Object.keys(temp_dht22_array).map(timestamp => new Date(parseFloat(timestamp))),
+            labels: Object.keys(filtered_temp_dht22_array).map(timestamp => new Date(parseFloat(timestamp))),
             datasets: [{
                 label: 'Temperature',
-                data: Object.values(temp_dht22_array),
+                data: Object.values(filtered_temp_dht22_array),
                 borderWidth: 1,
                 borderColor: 'red'
             }]
         };
         const humidityData = {
-            labels: Object.keys(humidity_array).map(timestamp => new Date(parseFloat(timestamp))),
+            labels: Object.keys(filtered_humidity_array).map(timestamp => new Date(parseFloat(timestamp))),
             datasets: [{
                 label: 'Humidity',
-                data: Object.values(humidity_array),
+                data: Object.values(filtered_humidity_array),
                 borderWidth: 1,
                 borderColor: 'red'
             }]
@@ -396,8 +402,31 @@
         humidityChart.update();
     }
 
+    async function updateChartsValues() {
+        const time_range = document.getElementById('time_range').value;
+
+    const loadingContainer = document.querySelector('.loading-container');
+        const chartsContainer = document.querySelector('.charts-container');
+        chartsContainer.style.display = 'none';
+        loadingContainer.style.display = 'flex';
+
+        const response = await fetch("/get-measured-values/" + '{{ connection["connection_id"] }}', {
+                method: "GET",
+        });
+        const arrays = await response.json();
+
+        lux_array = arrays.lux_array;
+        temp_hw611_array = arrays.temp_hw611_array;
+        pressure_array = arrays.pressure_array;
+        temp_dht22_array = arrays.temp_dht22_array;
+        humidity_array = arrays.humidity_array;
+
+        updateCharts(time_range);
+    }
+
 
     let luxChart, tempChartHw611, pressureChart, tempChartDht22, humidityChart;
+    let lux_array, temp_hw611_array, pressure_array, temp_dht22_array, humidity_array;
 
     window.onload = function() {
         computeCharts();
