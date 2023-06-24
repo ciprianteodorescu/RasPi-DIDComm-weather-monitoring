@@ -144,7 +144,7 @@ def sendMeasuredValues():
 
 def start_agent():
     global agent
-    agent = loop.run_until_complete(raspberry_agent.runAgent(get_agent_endpoint()))
+    agent = loop.run_until_complete(raspberry_agent.runAgent("raspberrypi.local"))
 
 
 if __name__ == "__main__":

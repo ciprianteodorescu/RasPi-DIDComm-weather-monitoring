@@ -512,10 +512,10 @@ def start_web_app():
 
 def start_agent():
     global agent, loop
-    agent = loop.run_until_complete(server_agent.runServerAgentForWebApp(get_agent_endpoint()))
+    agent = loop.run_until_complete(server_agent.runServerAgentForWebApp("MacBook-Pro-6.local"))
 
 
 if __name__ == '__main__':
     Thread(target=start_agent).start()
-    # Thread(target=read_messages_periodically).start()
+    Thread(target=read_messages_periodically).start()
     start_web_app()
