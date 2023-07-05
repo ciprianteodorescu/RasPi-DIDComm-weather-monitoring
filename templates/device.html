@@ -1,0 +1,441 @@
+{% extends 'base.html' %}
+
+{% block title %}Device{% endblock %}
+
+{% block content %}
+    <div class="container-fluid">
+        <div class="grid-container">
+            <div class="column" id="column1">
+                <div class="options-container">
+                    <label>Select connected sensors:</label>
+                    <ul class="sensors-list">
+                        <li class="checkbox">
+                            <label for="tsl2561_sensor">
+                                <input type="checkbox" id="tsl2561_sensor" name="tsl2561_sensor" checked/>
+                                TSL2561 - Luminosity Sensor
+                            </label>
+                        </li>
+                        <li class="checkbox">
+                            <label for="hw611_sensor">
+                                <input type="checkbox" id="hw611_sensor" name="hw611_sensor" checked/>
+                                HW-611 - Pressure, Temperature Sensor
+                            </label>
+                        </li>
+                        <li class="checkbox">
+                            <label for="dht22_sensor">
+                                <input type="checkbox" id="dht22_sensor" name="dht22_sensor" checked/>
+                                DHT22 - Temperature, Humidity Sensor
+                            </label>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="column" id="column2">
+                <div class="options-container">
+                    <div class="form-group">
+                        <label for="new_location">Location:</label>
+                        <input type="text" id="new_location" name="new_location" value="{{ location }}" class="form-control" placeholder="No location set" />
+                    </div>
+                    <button onclick="setLocation('{{ connection['connection_id'] }}', new_location)" class="btn btn-primary">Update location</button>
+                </div>
+                <br />
+                <div class="options-container">
+                    <div class="form-group">
+                        <label for="time_range">Choose time range:</label>
+                        <select name="time_range" id="time_range">
+                            <option value="1_hour">Last Hour</option>
+                            <option value="12_hours">Last 12 Hours</option>
+                            <option value="1_day">Last Day</option>
+                            <option value="1_week">Last Week</option>
+                            <option value="1_month">Last Month</option>
+                            <option value="all" selected>All</option>
+                        </select>
+                    </div>
+                    <button onclick="updateChartsValues()" class="btn btn-primary">Refresh values</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="loading-container">
+            <div class="loader"></div>
+        </div>
+        <div class="charts-container">
+            <div class="chart" id="luxChartContainer">
+                <canvas id="luxChart"></canvas>
+            </div>
+
+            <div class="chart" id="tempChartHw611Container">
+                <canvas id="tempChartHw611"></canvas>
+            </div>
+
+            <div class="chart" id="pressureChartContainer">
+                <canvas id="pressureChart"></canvas>
+            </div>
+
+            <div class="chart" id="tempChartDht22Container">
+                <canvas id="tempChartDht22"></canvas>
+            </div>
+
+            <div class="chart" id="humidityChartContainer">
+                <canvas id="humidityChart"></canvas>
+            </div>
+        </div>
+
+        <div class="remove-device">
+            <p>Do you want to remove this device?</p>
+            <button onclick="removeDevice('{{ connection['connection_id'] }}')" class="btn btn-danger">Remove</button>
+        </div>
+    </div>
+{% endblock %}
+
+{% block script %}
+<script>
+    function removeDevice(connId) {
+        const confirmation = confirm("Are you sure you want to remove this device?");
+        if (confirmation) {
+            fetch("/delete-connection/" + connId, {
+                method: "GET",
+            });
+            baseURL = window.location.href.slice(0, -37);
+            window.location.href = baseURL;
+        }
+    }
+
+    function setLocation(connId, new_location) {
+        const body = JSON.stringify({
+            location: new_location.value,
+        });
+        fetch("/set-connection-location/" + connId, {
+            method: "POST",
+            body: body
+        });
+    }
+
+    function getChartOptionsWithMeasurementUnit(label) {
+        return {
+            scales: {
+                x: {
+                    type: 'time',
+                    display: true,
+                    ticks: {
+                        autoSkip: false,
+                        major: {
+                            enabled: true,
+                        },
+                        font: function(context) {
+                            if (context.tick && context.tick.major) {
+                                return {
+                                    weight: 'bold',
+                                };
+                            }
+                        },
+                    },
+                },
+                y: {
+                    beginAtZero: false,
+                    ticks: {
+                        callback: function(value, index, ticks) {
+                            return value + label;
+                        },
+                    },
+                },
+            },
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: (item) => `${item.dataset.label}: ${item.formattedValue}${label}`,
+                    },
+                },
+            },
+        }
+    }
+
+    function filterArrayByTime(array, time_range='all') {
+        const time = new Date();
+        if (time_range == '1_hour') {
+            time.setHours(time.getHours() - 1);
+        } else if (time_range == '12_hours') {
+            time.setHours(time.getHours() - 12);
+        } else if (time_range == '1_day') {
+            time.setDate(time.getDate() - 1);
+        } else if (time_range == '1_week') {
+            time.setDate(time.getDate() - 7);
+        } else if (time_range == '1_month') {
+            time.setMonth(time.getMonth() - 1);
+        } else {
+            return array;
+        }
+
+        return Object.fromEntries(Object.entries(array).filter(([timestamp]) => new Date(parseFloat(timestamp)) >= time));
+    }
+
+    async function computeCharts() {
+        const loadingContainer = document.querySelector('.loading-container');
+        const chartsContainer = document.querySelector('.charts-container');
+        chartsContainer.style.display = 'none';
+        loadingContainer.style.display = 'flex';
+
+        const luxChartElement = document.getElementById('luxChart');
+        const tempChartHw611Element = document.getElementById('tempChartHw611');
+        const pressureChartElement = document.getElementById('pressureChart');
+        const tempChartDht22Element = document.getElementById('tempChartDht22');
+        const humidityChartElement = document.getElementById('humidityChart');
+
+        const response = await fetch("/get-measured-values/" + '{{ connection["connection_id"] }}', {
+                method: "GET",
+        });
+        const arrays = await response.json();
+
+        lux_array = arrays.lux_array;
+        temp_hw611_array = arrays.temp_hw611_array;
+        pressure_array = arrays.pressure_array;
+        temp_dht22_array = arrays.temp_dht22_array;
+        humidity_array = arrays.humidity_array;
+
+        const luxValues = Object.values(arrays.lux_array);
+        const luxTimestamps = Object.keys(arrays.lux_array).map(timestamp => new Date(parseFloat(timestamp)));
+
+        const tempValuesHw611 = Object.values(arrays.temp_hw611_array);
+        const tempTimestampsHw611 = Object.keys(arrays.temp_hw611_array).map(timestamp => new Date(parseFloat(timestamp)));
+
+        const pressureValues = Object.values(arrays.pressure_array);
+        const pressureTimestamps = Object.keys(arrays.pressure_array).map(timestamp => new Date(parseFloat(timestamp)));
+
+        const tempValuesDht22 = Object.values(arrays.temp_dht22_array);
+        const tempTimestampsDht22 = Object.keys(arrays.temp_dht22_array).map(timestamp => new Date(parseFloat(timestamp)));
+
+        const humidityValues = Object.values(arrays.humidity_array);
+        const humidityTimestamps = Object.keys(arrays.humidity_array).map(timestamp => new Date(parseFloat(timestamp)));
+
+        const luxData = {
+            labels: luxTimestamps,
+            datasets: [{
+                label: 'Lux',
+                data: luxValues,
+                borderWidth: 1,
+                borderColor: 'red'
+            }]
+        };
+        const tempDataHw611 = {
+            labels: tempTimestampsHw611,
+            datasets: [{
+                label: 'Temperature',
+                data: tempValuesHw611,
+                borderWidth: 1,
+                borderColor: 'red'
+            }]
+        };
+        const pressureData = {
+            labels: pressureTimestamps,
+            datasets: [{
+                label: 'Pressure',
+                data: pressureValues,
+                borderWidth: 1,
+                borderColor: 'red'
+            }]
+        };
+        const tempDataDht22 = {
+            labels: tempTimestampsDht22,
+            datasets: [{
+                label: 'Temperature',
+                data: tempValuesDht22,
+                borderWidth: 1,
+                borderColor: 'red'
+            }]
+        };
+        const humidityData = {
+            labels: humidityTimestamps,
+            datasets: [{
+                label: 'Humidity',
+                data: humidityValues,
+                borderWidth: 1,
+                borderColor: 'red'
+            }]
+        };
+
+        const luxOptions = getChartOptionsWithMeasurementUnit(' lx')
+        const tempOptions = getChartOptionsWithMeasurementUnit('°C')
+        const pressureOptions = getChartOptionsWithMeasurementUnit(' hPa')
+        const humidityOptions = getChartOptionsWithMeasurementUnit('%')
+
+        loadingContainer.style.display = 'none';
+        chartsContainer.style.display = 'grid';
+
+        luxChart = new Chart(luxChartElement, {
+            type: 'line',
+            data: luxData,
+            options: luxOptions,
+        });
+        tempChartHw611 = new Chart(tempChartHw611Element, {
+            type: 'line',
+            data: tempDataHw611,
+            options: tempOptions,
+        });
+        pressureChart = new Chart(pressureChartElement, {
+            type: 'line',
+            data: pressureData,
+            options: pressureOptions,
+        });
+        tempChartDht22 = new Chart(tempChartDht22Element, {
+            type: 'line',
+            data: tempDataDht22,
+            options: tempOptions,
+        });
+        humidityChart = new Chart(humidityChartElement, {
+            type: 'line',
+            data: humidityData,
+            options: humidityOptions,
+        });
+    }
+
+    function selectSensors() {
+        const tsl2561_checkbox = document.getElementById('tsl2561_sensor');
+        const hw611_checkbox = document.getElementById('hw611_sensor');
+        const dht22_checkbox = document.getElementById('dht22_sensor');
+
+        tsl2561_checkbox.addEventListener('change', function() {
+            const chart = document.getElementById('luxChartContainer');
+            if (!this.checked) {
+                chart.classList.add('hidden');
+            } else {
+                chart.classList.remove('hidden');
+            }
+        });
+        hw611_checkbox.addEventListener('change', function() {
+            const chart1 = document.getElementById('tempChartHw611Container');
+            const chart2 = document.getElementById('pressureChartContainer');
+            if (!this.checked) {
+                chart1.classList.add('hidden');
+                chart2.classList.add('hidden');
+            } else {
+                chart1.classList.remove('hidden');
+                chart2.classList.remove('hidden');
+            }
+        });
+        dht22_checkbox.addEventListener('change', function() {
+            const chart1 = document.getElementById('tempChartDht22Container');
+            const chart2 = document.getElementById('humidityChartContainer');
+            if (!this.checked) {
+                chart1.classList.add('hidden');
+                chart2.classList.add('hidden');
+            } else {
+                chart1.classList.remove('hidden');
+                chart2.classList.remove('hidden');
+            }
+        });
+    }
+
+    async function updateCharts(time_range='all') {
+        const loadingContainer = document.querySelector('.loading-container');
+        const chartsContainer = document.querySelector('.charts-container');
+        chartsContainer.style.display = 'none';
+        loadingContainer.style.display = 'flex';
+
+        filtered_lux_array = filterArrayByTime(lux_array, time_range);
+        filtered_temp_hw611_array = filterArrayByTime(temp_hw611_array, time_range);
+        filtered_pressure_array = filterArrayByTime(pressure_array, time_range);
+        filtered_temp_dht22_array = filterArrayByTime(temp_dht22_array, time_range);
+        filtered_humidity_array = filterArrayByTime(humidity_array, time_range);
+
+        const luxData = {
+            labels: Object.keys(filtered_lux_array).map(timestamp => new Date(parseFloat(timestamp))),
+            datasets: [{
+                label: 'Lux',
+                data: Object.values(filtered_lux_array),
+                borderWidth: 1,
+                borderColor: 'red'
+            }]
+        };
+        const tempDataHw611 = {
+            labels: Object.keys(filtered_temp_hw611_array).map(timestamp => new Date(parseFloat(timestamp))),
+            datasets: [{
+                label: 'Temperature',
+                data: Object.values(filtered_temp_hw611_array),
+                borderWidth: 1,
+                borderColor: 'red'
+            }]
+        };
+        const pressureData = {
+            labels: Object.keys(filtered_pressure_array).map(timestamp => new Date(parseFloat(timestamp))),
+            datasets: [{
+                label: 'Pressure',
+                data: Object.values(filtered_pressure_array),
+                borderWidth: 1,
+                borderColor: 'red'
+            }]
+        };
+        const tempDataDht22 = {
+            labels: Object.keys(filtered_temp_dht22_array).map(timestamp => new Date(parseFloat(timestamp))),
+            datasets: [{
+                label: 'Temperature',
+                data: Object.values(filtered_temp_dht22_array),
+                borderWidth: 1,
+                borderColor: 'red'
+            }]
+        };
+        const humidityData = {
+            labels: Object.keys(filtered_humidity_array).map(timestamp => new Date(parseFloat(timestamp))),
+            datasets: [{
+                label: 'Humidity',
+                data: Object.values(filtered_humidity_array),
+                borderWidth: 1,
+                borderColor: 'red'
+            }]
+        };
+
+        luxChart.data = luxData;
+        tempChartHw611.data = tempDataHw611;
+        pressureChart.data = pressureData;
+        tempChartDht22.data = tempDataDht22;
+        humidityChart.data = humidityData;
+
+        loadingContainer.style.display = 'none';
+        chartsContainer.style.display = 'grid';
+
+        luxChart.update();
+        tempChartHw611.update();
+        pressureChart.update();
+        tempChartDht22.update();
+        humidityChart.update();
+    }
+
+    async function updateChartsValues() {
+        const time_range = document.getElementById('time_range').value;
+
+    const loadingContainer = document.querySelector('.loading-container');
+        const chartsContainer = document.querySelector('.charts-container');
+        chartsContainer.style.display = 'none';
+        loadingContainer.style.display = 'flex';
+
+        const response = await fetch("/get-measured-values/" + '{{ connection["connection_id"] }}', {
+                method: "GET",
+        });
+        const arrays = await response.json();
+
+        lux_array = arrays.lux_array;
+        temp_hw611_array = arrays.temp_hw611_array;
+        pressure_array = arrays.pressure_array;
+        temp_dht22_array = arrays.temp_dht22_array;
+        humidity_array = arrays.humidity_array;
+
+        updateCharts(time_range);
+    }
+
+
+    let luxChart, tempChartHw611, pressureChart, tempChartDht22, humidityChart;
+    let lux_array, temp_hw611_array, pressure_array, temp_dht22_array, humidity_array;
+
+    window.onload = function() {
+        computeCharts();
+        selectSensors();
+
+        const time_range = document.getElementById('time_range');
+        time_range.addEventListener('change', function() {
+            updateCharts(this.value)
+        });
+    };
+</script>
+{% endblock %}

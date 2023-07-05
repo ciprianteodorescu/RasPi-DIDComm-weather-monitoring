@@ -1,23 +1,63 @@
 <!doctype html>
-<!-- Latest compiled and minified CSS -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@3.4.1/dist/css/bootstrap.min.css" integrity="sha384-HSMxcRTRxnN+Bdg0JdbxYKrThecOKuH5zCYotlSAcp1+c8xmyTe9GYg1l9a69psu" crossorigin="anonymous">
+<html>
+<head>
+    <!-- Latest compiled and minified CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@3.4.1/dist/css/bootstrap.min.css" integrity="sha384-HSMxcRTRxnN+Bdg0JdbxYKrThecOKuH5zCYotlSAcp1+c8xmyTe9GYg1l9a69psu" crossorigin="anonymous">
 
-<!-- Optional theme -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@3.4.1/dist/css/bootstrap-theme.min.css" integrity="sha384-6pzBo3FDv/PJ8r2KRkGHifhEocL+1X2rVCTTkUfGk7/0pbek5mMa1upzvWbrUbOZ" crossorigin="anonymous">
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
 
-<!-- Latest compiled and minified JavaScript -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@3.4.1/dist/js/bootstrap.min.js" integrity="sha384-aJ21OjlMXNL5UyIl/XNwTMqvzeRMZH2w8c5cRVpzpU8Y5bApTppSuUkhZXN0VxHd" crossorigin="anonymous"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-<title>Weather monitoring</title>
-<nav>
-    <h1>Welcome</h1>
-</nav>
-<section class="content">
-    <header>Work in progress</header>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js/dist/chart.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
 
-    <div class="flash">
-        <p class="center">Loading...</p>
-        <img src="{{ url_for('static', filename='work_in_progress.png') }}" class="center"/>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>{% block title %}{% endblock %}</title>
+</head>
+
+<body>
+    <div class="top-bar">
+        <h4 class="top-bar-home">
+            <a id="home" class="top-bar-child" href="/">Home</a>
+        </h4>
+
+        <div>
+            <div class="dropdown">
+                <a id="user" class="top-bar-child dropdown-button" href="{% if username %}/{% else %}/login{% endif %}" >User</a>
+                <div class="dropdown-content">
+                    {% if username %}
+                        <a id="logout" href="/logout">Log out</a>
+                    {% else %}
+                        <a id="login" href="/login">Log in</a>
+                        <a id="signup" href="/signup">Sign up</a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="dropdown">
+                <a id="devices" class="top-bar-child {% if labels | length > 0 %}dropdown-button{% endif %}" href="/devices" >Devices</a>
+                <div class="dropdown-content">
+                    {% for i in range(labels | length) %}
+                        <a id="device-{{ connection_ids[i] }}" href="/devices/{{ connection_ids[i] }}">{{ labels[i] }}</a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
     </div>
-</section>
+
+    <div class="body-content">
+        {% block content %}
+        {% endblock %}
+    </div>
+
+    <div class="bottom-container">
+      <p class="bottom-text">Teodorescu Ciprian, 443D</p>
+      <p class="bottom-text">{{ date }}</p>
+    </div>
+
+    {% block script %}
+    {% endblock %}
+</body>
+</html>

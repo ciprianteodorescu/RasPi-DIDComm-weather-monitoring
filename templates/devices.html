@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+
+{% block title %}Devices{% endblock %}
+
+{% block content %}
+    <p>You have {{ labels | length }} device{% if labels | length != 1 %}s{% endif %} connected{% if labels | length == 0 %}.{% else %}:{% endif %}</p>
+    {% if labels %}
+        <ul class="device-list">
+            {% for i in range(labels | length) %}
+                <li>
+                    <a href="/devices/{{ connection_ids[i] }}">{{ labels[i] }}</a>
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+{% endblock %}

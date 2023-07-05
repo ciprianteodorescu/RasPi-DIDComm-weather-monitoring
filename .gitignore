@@ -8,3 +8,5 @@ instance/
 .DS_Store
 
 .idea/
+aries-cloudagent-python/
+db.sqlite
