@@ -18,7 +18,7 @@ import asyncio
 from threading import Thread
 import json
 
-from utils import get_agent_endpoint, run_in_coroutine
+from utils import run_in_coroutine
 from demo.runners import server_agent
 
 import nest_asyncio
@@ -301,37 +301,6 @@ async def get_connection_user(connection_id):
         return {}
 
 
-@app.route("/set-sensor-types/<connection_id>", methods=["POST"])
-async def set_sensor_types(connection_id):
-    try:
-        args = await request.get_data()
-        json_args = json.loads(args.decode("utf-8"))
-
-        sensor_types_request = {"metadata": json_args}
-        return run_in_coroutine(
-            loop,
-            agent.agent.admin_POST(
-                f"/connections/{connection_id}/metadata",
-                sensor_types_request,
-            )
-        )
-    except:
-        return {}
-
-
-@app.route("/get-sensor-types/<connection_id>")
-async def get_sensor_types(connection_id):
-    try:
-        return run_in_coroutine(
-            loop,
-            agent.agent.admin_GET(
-                f"/connections/{connection_id}/metadata",
-            )
-        )["results"]["sensor_types"]
-    except:
-        return {}
-
-
 @app.route("/get-connection-from-did/<did>")
 async def get_connection_from_did(did):
     try:
@@ -374,11 +343,11 @@ async def get_measured_values(connection_id):
                 lux_array[timestamp] = lux
             if temperature_hw611 is not None:
                 temp_hw611_array[timestamp] = temperature_hw611
-            if pressure is not None:
+            if pressure is not None and 950 < pressure < 1070:
                 pressure_array[timestamp] = pressure
-            if temperature_dht22 is not None and temperature_dht22 != 0 and temperature_dht22 < 50:
+            if temperature_dht22 is not None and 0 < temperature_dht22 < 50:
                 temp_dht22_array[timestamp] = temperature_dht22
-            if humidity is not None and humidity != 0 and humidity < 90:
+            if humidity is not None and 0 < humidity < 90:
                 humidity_array[timestamp] = humidity
         except:
             pass
@@ -389,64 +358,6 @@ async def get_measured_values(connection_id):
         "temp_dht22_array": temp_dht22_array,
         "humidity_array": humidity_array,
     }
-
-
-@app.route("/get-last-measured-values")
-async def get_last_measured_values():
-    for conn_id in connection_ids:
-        messages = await get_messages(conn_id)
-
-        lux = None
-        temp_hw611 = None
-        pressure = None
-        temp_dht22 = None
-        humidity = None
-
-        lux_time = ""
-        temp_hw611_time = ""
-        pressure_time = ""
-        temp_dht22_time = ""
-        humidity_time = ""
-
-        for m in messages:
-            timestamp = m["sent_time"]
-
-            if timestamp >= lux_time or timestamp >= temp_hw611_time or timestamp >= pressure_time \
-                    or timestamp >= temp_dht22_time or timestamp >= humidity_time:
-                values = m["content"]
-                json_values = json.loads(values)
-
-                if timestamp >= lux_time:
-                    tsl2561 = json_values["TSL2561"]
-                    if "lux" in tsl2561.keys():
-                        lux = tsl2561["lux"]
-                        lux_time = timestamp
-
-                if timestamp >= temp_hw611_time or timestamp >= pressure_time:
-                    hw611 = json_values["HW-611"]
-                    if "temperature" in hw611.keys():
-                        temp_hw611 = hw611["temperature"]
-                        temp_hw611_time = timestamp
-                    if "pressure" in hw611.keys():
-                        pressure = hw611["pressure"]
-                        pressure_time = timestamp
-
-                if timestamp >= temp_dht22_time or timestamp >= humidity_time:
-                    dht22 = json_values["DHT22"]
-                    if "temperature" in dht22.keys():
-                        temp_dht22 = dht22["temperature"]
-                        temp_dht22_time = timestamp
-                    if "humidity" in dht22.keys():
-                        humidity = dht22["humidity"]
-                        humidity_time = timestamp
-
-        return {
-            "lux": {lux_time: lux},
-            "temp_hw611": {temp_hw611_time: temp_hw611},
-            "pressure": {pressure_time: pressure},
-            "temp_dht22": {temp_dht22_time: temp_dht22},
-            "humidity": {humidity_time: humidity},
-        }
 
 
 @app.route("/delete-connection/<connection_id>")

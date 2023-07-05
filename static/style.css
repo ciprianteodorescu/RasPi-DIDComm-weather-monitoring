@@ -30,10 +30,6 @@ body {
     margin: 0;
 }
 
-.center {
-    text-align: center;
-}
-
 .top-bar {
     min-height: 4rem;
     background-color: #ffffff;
@@ -108,14 +104,6 @@ body {
     border: 1px solid #ccc;
     background-color: #fff;
     margin-bottom: 1rem;
-}
-
-.select-sensors-container {
-    margin-bottom: 2rem;
-}
-
-.select-sensors-container {
-    margin-bottom: 2rem;
 }
 
 .sensors-list {

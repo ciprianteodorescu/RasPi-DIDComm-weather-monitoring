@@ -1,7 +1,7 @@
 import asyncio
 import nest_asyncio
 from demo.runners import raspberry_agent
-from utils import get_agent_endpoint, run_in_coroutine
+from utils import run_in_coroutine
 import json
 
 # TSL2561 imports
@@ -73,10 +73,10 @@ def initSensors():
 
 def readTSL2561():
     try:
+        print("\nReading TSL2561 data")
         broadband = round(tsl2561.broadband, 1)
         infrared = round(tsl2561.infrared, 1)
         lux = round(tsl2561.lux, 1)
-        print("\nReading TSL2561 data")
         print(f'Broadband: {broadband}')
         print(f'Infrared: {infrared}')
         print(f'Lux: {lux}')
@@ -88,9 +88,9 @@ def readTSL2561():
 
 def readHW611():
     try:
+        print("\nReading HW-611 data")
         temperature = round(hw611.get_temperature(), 1)
         pressure = round(hw611.get_pressure(), 1)
-        print("\nReading HW-611 data")
         print(f"Temperature: {temperature}")
         print(f"Pressure: {pressure}")
         return {"temperature": temperature, "pressure": pressure}
@@ -100,9 +100,9 @@ def readHW611():
 
 
 def readDHT22():
-    print("\nReading DHT22 data")
     while True:
         try:
+            print("\nReading DHT22 data")
             temperature = round(dht22.temperature, 1)
             humidity = round(dht22.humidity, 1)
             print(f"Temperature: {temperature}")
